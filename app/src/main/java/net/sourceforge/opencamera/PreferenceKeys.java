@@ -143,6 +143,8 @@ public class PreferenceKeys {
 
 	public static final String RemoteName = "preference_remote_device_name";
 
+	public static final String RemoteType = "preference_remote_type";
+
 	//public static final String BackgroundPhotoSavingPreferenceKey = "preference_background_photo_saving";
 
 	public static final String Camera2FakeFlashPreferenceKey = "preference_camera2_fake_flash";

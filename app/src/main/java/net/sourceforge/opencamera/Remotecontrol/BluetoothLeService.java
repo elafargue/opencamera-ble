@@ -32,7 +32,11 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -46,7 +50,9 @@ public class BluetoothLeService extends Service {
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
+    private String mRemoteDeviceType;
     private int mConnectionState = STATE_DISCONNECTED;
+    private HashMap<String, BluetoothGattCharacteristic> subscribedCharacteristics = new HashMap<>();
 
     private static final int STATE_DISCONNECTED = 0;
     private static final int STATE_CONNECTING = 1;
@@ -63,8 +69,11 @@ public class BluetoothLeService extends Service {
     public final static String EXTRA_DATA =
             "com.example.bluetooth.le.EXTRA_DATA";
 
-    public final static UUID UUID_HEART_RATE_MEASUREMENT =
-            UUID.fromString(KrakenGattAttributes.HEART_RATE_MEASUREMENT);
+
+    public void setRemoteDeviceType(String remoteDeviceType) {
+        Log.d(TAG, "Setting remote type: " + remoteDeviceType);
+        mRemoteDeviceType = remoteDeviceType;
+    }
 
     // Implements callback methods for GATT events that the app cares about.  For example,
     // connection change and services discovered.
@@ -78,8 +87,8 @@ public class BluetoothLeService extends Service {
                 broadcastUpdate(intentAction);
                 Log.i(TAG, "Connected to GATT server.");
                 // Attempts to discover services after successful connection.
-                Log.i(TAG, "Attempting to start service discovery:" +
-                        mBluetoothGatt.discoverServices());
+                Log.i(TAG, "Attempting to start service discovery");
+                mBluetoothGatt.discoverServices();
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = ACTION_GATT_DISCONNECTED;
@@ -93,6 +102,7 @@ public class BluetoothLeService extends Service {
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+                subscribeToServices();
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
             }
@@ -110,9 +120,47 @@ public class BluetoothLeService extends Service {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
+            Log.d(TAG,"Got notification");
             broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
         }
     };
+
+    /**
+     * Subscribe to the services/characteristics we need depending
+     * on the remote device model
+     *
+     */
+    private void subscribeToServices() {
+        List<BluetoothGattService> gattServices = getSupportedGattServices();
+        if (gattServices == null) return;
+        UUID uuid = null;
+        List<UUID> mCharacteristicsWanted;
+
+        switch (mRemoteDeviceType) {
+            case "preference_remote_type_kraken":
+                mCharacteristicsWanted = KrakenGattAttributes.getDesiredCharacteristics();
+                break;
+            default:
+                mCharacteristicsWanted = Arrays.asList(UUID.fromString("0000"));
+                break;
+        }
+
+        // Loops through available GATT Services and characteristics, and subscribe to
+        // the ones we want. Today, we just enable notifications since that's all we need.
+        for (BluetoothGattService gattService : gattServices) {
+            List<BluetoothGattCharacteristic> gattCharacteristics =
+                    gattService.getCharacteristics();
+            // Loops through available Characteristics.
+            for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {
+                uuid = gattCharacteristic.getUuid();
+                if (mCharacteristicsWanted.contains(uuid)) {
+                    Log.d(TAG, "Found characteristic to subscribe to: " + uuid);
+                    setCharacteristicNotification(gattCharacteristic, true);
+                }
+            }
+        }
+
+    }
 
     private void broadcastUpdate(final String action) {
         final Intent intent = new Intent(action);
@@ -122,11 +170,24 @@ public class BluetoothLeService extends Service {
     private void broadcastUpdate(final String action,
                                  final BluetoothGattCharacteristic characteristic) {
         final Intent intent = new Intent(action);
+        UUID uuid = characteristic.getUuid();
+
+        if (KrakenGattAttributes.KRAKEN_BUTTONS_CHARACTERISTIC.equals(uuid)) {
+            Log.d(TAG,"Got Kraken button press");
+            int format = BluetoothGattCharacteristic.FORMAT_UINT8;
+            final int buttonCode= characteristic.getIntValue(format, 0);
+            Log.d(TAG, String.format("Received Button press: %d", buttonCode));
+            intent.putExtra(EXTRA_DATA, String.valueOf(buttonCode));
+
+        } else if (KrakenGattAttributes.KRAKEN_SENSORS_CHARACTERISTIC.equals(uuid)) {
+            Log.d(TAG, "Got Kraken sensor reading, discarding for now");
+            return;
+        }
 
         // This is special handling for the Heart Rate Measurement profile.  Data parsing is
         // carried out as per profile specifications:
         // http://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml
-        if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
+        if (KrakenGattAttributes.HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
             int flag = characteristic.getProperties();
             int format = -1;
             if ((flag & 0x01) != 0) {
@@ -264,6 +325,10 @@ public class BluetoothLeService extends Service {
         if (mBluetoothGatt == null) {
             return;
         }
+        // Just to be sure: disable all notifications before closing
+//        for (Map.Entry<String, BluetoothGattCharacteristic> charac : subscribedCharacteristics.entrySet()) {
+//            setCharacteristicNotification(charac.getValue(), false);
+//        }
         mBluetoothGatt.close();
         mBluetoothGatt = null;
     }
@@ -284,7 +349,7 @@ public class BluetoothLeService extends Service {
     }
 
     /**
-     * Enables or disables notification on a give characteristic.
+     * Enables or disables notification on a given characteristic.
      *
      * @param characteristic Characteristic to act on.
      * @param enabled If true, enable notification.  False otherwise.
@@ -295,12 +360,21 @@ public class BluetoothLeService extends Service {
             Log.w(TAG, "BluetoothAdapter not initialized");
             return;
         }
+        String uuid = characteristic.getUuid().toString();
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
+        if (enabled) {
+            subscribedCharacteristics.put(uuid, characteristic);
+        } else {
+            subscribedCharacteristics.remove(uuid);
+        }
 
-        // This is specific to Heart Rate Measurement.
-        if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
-                    UUID.fromString(KrakenGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
+        // Some devices have a CLIENT_CHARACTERISTIC UUID that needs to be written to actually
+        // enable notifications
+        if (KrakenGattAttributes.HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())
+                || KrakenGattAttributes.KRAKEN_SENSORS_CHARACTERISTIC.equals(characteristic.getUuid())
+                || KrakenGattAttributes.KRAKEN_BUTTONS_CHARACTERISTIC.equals(characteristic.getUuid())
+            ) {
+            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(KrakenGattAttributes.CLIENT_CHARACTERISTIC_CONFIG);
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             mBluetoothGatt.writeDescriptor(descriptor);
         }

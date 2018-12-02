@@ -627,6 +627,18 @@ public class MainUI {
     	return this.ui_placement_right;
     }
 
+    public void updateRemoteConnectionIcon() {
+        View remoteConnectedIcon = main_activity.findViewById(R.id.kraken_icon);
+        if (main_activity.remoteConnected() ) {
+            Log.d(TAG, "Remote control connected");
+            remoteConnectedIcon.setVisibility(View.VISIBLE);
+        } else {
+            Log.d(TAG, "Remote control DISconnected");
+            remoteConnectedIcon.setVisibility(View.GONE);
+        }
+
+    }
+
     public void onOrientationChanged(int orientation) {
 		/*if( MyDebug.LOG ) {
 			Log.d(TAG, "onOrientationChanged()");
@@ -771,7 +783,16 @@ public class MainUI {
 			    if( !(show_gui_photo && show_gui_video) ) {
 			    	closePopup(); // we still allow the popup when recording video, but need to update the UI (so it only shows flash options), so easiest to just close
 			    }
-				popupButton.setVisibility(main_activity.getPreview().supportsFlash() ? visibility_video : visibility); // still allow popup in order to change flash mode when recording video
+                View remoteConnectedIcon = main_activity.findViewById(R.id.kraken_icon);
+                if (main_activity.remoteConnected() ) {
+                    Log.d(TAG, "Remote control connected");
+                    remoteConnectedIcon.setVisibility(View.VISIBLE);
+                } else {
+                    Log.d(TAG, "Remote control DISconnected");
+                    remoteConnectedIcon.setVisibility(View.GONE);
+                }
+
+                popupButton.setVisibility(main_activity.getPreview().supportsFlash() ? visibility_video : visibility); // still allow popup in order to change flash mode when recording video
 			}
 		});
     }

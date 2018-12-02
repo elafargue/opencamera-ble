@@ -94,6 +94,8 @@ public class MainActivity extends Activity {
 	private MainUI mainUI;
 	private BluetoothLeService mBluetoothLeService;
 	private String mRemoteDeviceAddress;
+	private String mRemoteDeviceType;
+	private Boolean mRemoteConnected = false;
 	private PermissionHandler permissionHandler;
 	private SoundPoolManager soundPoolManager;
 	private ManualSeekbars manualSeekbars;
@@ -166,6 +168,7 @@ public class MainActivity extends Activity {
         public void onServiceDisconnected(ComponentName componentName) {
             mBluetoothLeService = null;
         }
+
     };
 
 	
@@ -727,6 +730,8 @@ public class MainActivity extends Activity {
 		// null from beneath applicationInterface.onDestroy()
 		waitUntilImageQueueEmpty();
 
+		stopRemoteControl();
+
 		preview.onDestroy();
 		if( applicationInterface != null ) {
 			applicationInterface.onDestroy();
@@ -1049,16 +1054,98 @@ public class MainActivity extends Activity {
         }
     };
 
+    // Handles various events fired by the Service.
+    // ACTION_GATT_CONNECTED: connected to a GATT server.
+    // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
+    // ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
+    // ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read
+    //                        or notification operations.
+    private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
+                Log.d(TAG, "Remote connected");
+                // Tell the Bluetooth service what remote we want to use
+                mBluetoothLeService.setRemoteDeviceType(mRemoteDeviceType);
+            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
+                Log.d(TAG, "Remote disconnected");
+                mRemoteConnected = false;
+                mainUI.updateRemoteConnectionIcon();
+            } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
+                Log.d(TAG, "Remote services discovered");
+                /*
+                We let the BluetoothLEService subscribe to what is relevant, so we
+                do nothing here, but we wait until this is done to update the UI
+                icon
+                */
+                mRemoteConnected = true;
+                mainUI.updateRemoteConnectionIcon();
+            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
+                Log.d(TAG, "Data incoming: " + intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+                // displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+            } else {
+                Log.d(TAG, "Other remote event");
+            }
+        }
+    };
+
+    public Boolean remoteConnected() {
+        return mRemoteConnected;
+    }
+
+    private static IntentFilter makeGattUpdateIntentFilter() {
+        final IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
+        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        return intentFilter;
+    }
+
+
+    /**
+     * Starts or stops the remote control layer
+     */
     private void startRemoteControl() {
         Log.d(TAG, "BLE Remote control service start check...");
+        Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         if ( remoteEnabled()) {
             Log.d(TAG, "Remote enabled, starting service");
-            Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
+            registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
             bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+        } else {
+            Log.d(TAG, "Remote disabled, stopping service");
+            // Stop the service if necessary
+            try{
+                unregisterReceiver(mGattUpdateReceiver);
+                unbindService(mServiceConnection);
+                mRemoteConnected = false; // Unbinding closes the connection, of course
+                mainUI.updateRemoteConnectionIcon();
+            } catch (IllegalArgumentException e){
+                Log.d(TAG, "Remote Service was not running, that's fine");
+            }
         }
     }
 
-	@Override
+    private void stopRemoteControl() {
+        Log.d(TAG, "BLE Remote control service shutdown...");
+        Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
+        if ( remoteEnabled()) {
+            // Stop the service if necessary
+            try{
+                unregisterReceiver(mGattUpdateReceiver);
+                unbindService(mServiceConnection);
+                mRemoteConnected = false; // Unbinding closes the connection, of course
+                mainUI.updateRemoteConnectionIcon();
+            } catch (IllegalArgumentException e){
+                Log.d(TAG, "Remote Service was not running, that's strange");
+            }
+        }
+    }
+
+
+    @Override
     protected void onResume() {
 		long debug_time = 0;
 		if( MyDebug.LOG ) {
@@ -1076,6 +1163,8 @@ public class MainActivity extends Activity {
         orientationEventListener.enable();
 
         registerReceiver(cameraReceiver, new IntentFilter("com.miband2.action.CAMERA"));
+        // For internal events:
+        registerReceiver(cameraReceiver, new IntentFilter("net.sourceforge.opencamera.action.CAMERA"));
 
         initSpeechRecognizer();
         initLocation();
@@ -1418,6 +1507,9 @@ public class MainActivity extends Activity {
 					if( MyDebug.LOG )
 						Log.d(TAG, "this change doesn't require update");
 					break;
+                case PreferenceKeys.EnableRemote:
+                    startRemoteControl();;
+                    break;
 				default:
 					if( MyDebug.LOG )
 						Log.d(TAG, "this change does require update");
@@ -3843,6 +3935,7 @@ public class MainActivity extends Activity {
 	public boolean remoteEnabled() {
 		SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 		Boolean remote_enabled = sharedPreferences.getBoolean(PreferenceKeys.EnableRemote, false);
+		mRemoteDeviceType = sharedPreferences.getString(PreferenceKeys.RemoteType, "undefined");
 		mRemoteDeviceAddress = sharedPreferences.getString(PreferenceKeys.RemoteName, "undefined");
 		return remote_enabled && !mRemoteDeviceAddress.equals("undefined");
 	}
