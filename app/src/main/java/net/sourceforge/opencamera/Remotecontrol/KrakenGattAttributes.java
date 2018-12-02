@@ -46,7 +46,6 @@ public class KrakenGattAttributes {
 
 
     public static List<UUID> getDesiredCharacteristics() {
-//        return Arrays.asList(KRAKEN_SENSORS_CHARACTERISTIC, KRAKEN_BUTTONS_CHARACTERISTIC);
         return Arrays.asList(KRAKEN_BUTTONS_CHARACTERISTIC, KRAKEN_SENSORS_CHARACTERISTIC);
     }
 

@@ -29,6 +29,7 @@ import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -37,6 +38,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 
 /**
@@ -60,15 +63,19 @@ public class BluetoothLeService extends Service {
     private static final int STATE_CONNECTED = 2;
 
     public final static String ACTION_GATT_CONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
+            "net.sourceforge.opencamera.Remotecontrol.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_DISCONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED";
+            "net.sourceforge.opencamera.Remotecontrol.ACTION_GATT_DISCONNECTED";
     public final static String ACTION_GATT_SERVICES_DISCOVERED =
-            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
+            "net.sourceforge.opencamera.Remotecontrol.ACTION_GATT_SERVICES_DISCOVERED";
     public final static String ACTION_DATA_AVAILABLE =
-            "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
+            "net.sourceforge.opencamera.Remotecontrol.ACTION_DATA_AVAILABLE";
+    public final static String ACTION_REMOTE_COMMAND =
+            "net.sourceforge.opencamera.Remotecontrol.COMMAND";
     public final static String EXTRA_DATA =
-            "com.example.bluetooth.le.EXTRA_DATA";
+            "net.sourceforge.opencamera.Remotecontrol.EXTRA_DATA";
+    public final static int COMMAND_SHUTTER = 0;
+    public final static int COMMAND_MODE = 1;
 
 
     public void setRemoteDeviceType(String remoteDeviceType) {
@@ -94,9 +101,20 @@ public class BluetoothLeService extends Service {
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = ACTION_GATT_DISCONNECTED;
                 mConnectionState = STATE_DISCONNECTED;
-                Log.i(TAG, "Disconnected from GATT server.");
+                Log.i(TAG, "Disconnected from GATT server, reattempting every 5 seconds.");
                 broadcastUpdate(intentAction);
+                attemptReconnect();
             }
+        }
+
+        public void attemptReconnect() {
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                public void run() {
+                    Log.w(TAG, "Attempting to reconnect to remote.");
+                    connect(mBluetoothDeviceAddress);
+                }
+            }, 5000);
         }
 
         @Override
@@ -180,55 +198,42 @@ public class BluetoothLeService extends Service {
         sendBroadcast(intent);
     }
 
-    private void broadcastUpdate(final String action,
+    private void broadcastUpdate( String action,
                                  final BluetoothGattCharacteristic characteristic) {
-        final Intent intent = new Intent(action);
         UUID uuid = characteristic.getUuid();
+        final int format_uint8 = BluetoothGattCharacteristic.FORMAT_UINT8;
+        int remoteCommand = -1;
 
         if (KrakenGattAttributes.KRAKEN_BUTTONS_CHARACTERISTIC.equals(uuid)) {
             Log.d(TAG,"Got Kraken button press");
-            int format = BluetoothGattCharacteristic.FORMAT_UINT8;
-            final int buttonCode= characteristic.getIntValue(format, 0);
+            final int buttonCode= characteristic.getIntValue(format_uint8, 0);
             Log.d(TAG, String.format("Received Button press: %d", buttonCode));
             if (buttonCode == 32) {
                 // Shutter press
-                final Intent intent2 = new Intent("net.sourceforge.opencamera.action.CAMERA");
-                sendBroadcast(intent2);
-                return;
+                action = ACTION_REMOTE_COMMAND;
+                remoteCommand = COMMAND_SHUTTER;
+            } else if (buttonCode == 16) {
+                // "Mode" button: either "back" action or "Photo/Camera" switch
+                action = ACTION_REMOTE_COMMAND;
+                remoteCommand = COMMAND_MODE;
             }
-
+            /*
+            TODO: Manage the key presses on the housing to control
+            the rest of the functions.
+            */
         } else if (KrakenGattAttributes.KRAKEN_SENSORS_CHARACTERISTIC.equals(uuid)) {
-            Log.d(TAG, "Got Kraken sensor reading, discarding for now");
+            float temperature = characteristic.getIntValue(format_uint8, 2) / 10;
+            Log.d(TAG, "Got Kraken sensor reading. Temperature: " + temperature);
             return;
         }
 
-        // This is special handling for the Heart Rate Measurement profile.  Data parsing is
-        // carried out as per profile specifications:
-        // http://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml
-        if (KrakenGattAttributes.HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
-            int flag = characteristic.getProperties();
-            int format = -1;
-            if ((flag & 0x01) != 0) {
-                format = BluetoothGattCharacteristic.FORMAT_UINT16;
-                Log.d(TAG, "Heart rate format UINT16.");
-            } else {
-                format = BluetoothGattCharacteristic.FORMAT_UINT8;
-                Log.d(TAG, "Heart rate format UINT8.");
-            }
-            final int heartRate = characteristic.getIntValue(format, 1);
-            Log.d(TAG, String.format("Received heart rate: %d", heartRate));
-            intent.putExtra(EXTRA_DATA, String.valueOf(heartRate));
-        } else {
-            // For all other profiles, writes the data formatted in HEX.
-            final byte[] data = characteristic.getValue();
-            if (data != null && data.length > 0) {
-                final StringBuilder stringBuilder = new StringBuilder(data.length);
-                for(byte byteChar : data)
-                    stringBuilder.append(String.format("%02X ", byteChar));
-                intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
-            }
+        // Only send forward if we have something to say
+        if (remoteCommand >= 0) {
+            final Intent intent = new Intent(action);
+            intent.putExtra(EXTRA_DATA, remoteCommand);
+            sendBroadcast(intent);
         }
-        sendBroadcast(intent);
+
     }
 
     public class LocalBinder extends Binder {
@@ -309,7 +314,14 @@ public class BluetoothLeService extends Service {
 
         final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         if (device == null) {
-            Log.w(TAG, "Device not found.  Unable to connect.");
+            Log.w(TAG, "Device not found.  Unable to connect. Will retry every 5 seconds.");
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                public void run() {
+                    Log.w(TAG, "Attempting to connect to remote");
+                    connect(address);
+                }
+            }, 5000);
             return false;
         }
         // We want to directly connect to the device, so we are setting the autoConnect

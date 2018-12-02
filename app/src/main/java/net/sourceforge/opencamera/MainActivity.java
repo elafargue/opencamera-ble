@@ -166,7 +166,13 @@ public class MainActivity extends Activity {
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
-            mBluetoothLeService = null;
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                public void run() {
+                    mBluetoothLeService.connect(mRemoteDeviceAddress);
+                }
+            }, 5000);
+
         }
 
     };
@@ -1054,19 +1060,22 @@ public class MainActivity extends Activity {
         }
     };
 
-    // Handles various events fired by the Service.
-    // ACTION_GATT_CONNECTED: connected to a GATT server.
-    // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
-    // ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
-    // ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read
-    //                        or notification operations.
-    private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+    /**
+     * Receives event from the remote command handler through intents
+     * Handles various events fired by the Service.
+     *  ACTION_GATT_CONNECTED: connected to a GATT server.
+     *  ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
+     *  ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
+     *  ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read
+     *                         or notification operations.
+     */
+    private final BroadcastReceiver remoteControlCommandReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
             if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
                 Log.d(TAG, "Remote connected");
-                // Tell the Bluetooth service what remote we want to use
+                // Tell the Bluetooth service what type of remote we want to use
                 mBluetoothLeService.setRemoteDeviceType(mRemoteDeviceType);
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 Log.d(TAG, "Remote disconnected");
@@ -1084,6 +1093,18 @@ public class MainActivity extends Activity {
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 Log.d(TAG, "Data incoming: " + intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
                 // displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+            } else if (BluetoothLeService.ACTION_REMOTE_COMMAND.equals(action)) {
+                int command = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, -1);
+                switch (command) {
+                    case BluetoothLeService.COMMAND_SHUTTER:
+                        MainActivity.this.takePicture(false);
+                        break;
+                    case BluetoothLeService.COMMAND_MODE:
+                        clickedSwitchVideo(null);
+                        break;
+                    default:
+                        break;
+                }
             } else {
                 Log.d(TAG, "Other remote event");
             }
@@ -1094,12 +1115,14 @@ public class MainActivity extends Activity {
         return mRemoteConnected;
     }
 
-    private static IntentFilter makeGattUpdateIntentFilter() {
+    // TODO: refactor for a filter than receives generic remote control intents
+    private static IntentFilter makeRemoteCommandIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(BluetoothLeService.ACTION_REMOTE_COMMAND);
         return intentFilter;
     }
 
@@ -1112,13 +1135,13 @@ public class MainActivity extends Activity {
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         if ( remoteEnabled()) {
             Log.d(TAG, "Remote enabled, starting service");
-            registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+            registerReceiver(remoteControlCommandReceiver, makeRemoteCommandIntentFilter());
             bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
         } else {
             Log.d(TAG, "Remote disabled, stopping service");
             // Stop the service if necessary
             try{
-                unregisterReceiver(mGattUpdateReceiver);
+                unregisterReceiver(remoteControlCommandReceiver);
                 unbindService(mServiceConnection);
                 mRemoteConnected = false; // Unbinding closes the connection, of course
                 mainUI.updateRemoteConnectionIcon();
@@ -1134,7 +1157,7 @@ public class MainActivity extends Activity {
         if ( remoteEnabled()) {
             // Stop the service if necessary
             try{
-                unregisterReceiver(mGattUpdateReceiver);
+                unregisterReceiver(remoteControlCommandReceiver);
                 unbindService(mServiceConnection);
                 mRemoteConnected = false; // Unbinding closes the connection, of course
                 mainUI.updateRemoteConnectionIcon();
@@ -1163,8 +1186,6 @@ public class MainActivity extends Activity {
         orientationEventListener.enable();
 
         registerReceiver(cameraReceiver, new IntentFilter("com.miband2.action.CAMERA"));
-        // For internal events:
-        registerReceiver(cameraReceiver, new IntentFilter("net.sourceforge.opencamera.action.CAMERA"));
 
         initSpeechRecognizer();
         initLocation();
