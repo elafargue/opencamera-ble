@@ -16,6 +16,10 @@
 
 package net.sourceforge.opencamera.Remotecontrol;
 
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.content.Intent;
+import android.util.Log;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +47,7 @@ public class KrakenGattAttributes {
 
     public static List<UUID> getDesiredCharacteristics() {
 //        return Arrays.asList(KRAKEN_SENSORS_CHARACTERISTIC, KRAKEN_BUTTONS_CHARACTERISTIC);
-        return Arrays.asList(KRAKEN_BUTTONS_CHARACTERISTIC);
+        return Arrays.asList(KRAKEN_BUTTONS_CHARACTERISTIC, KRAKEN_SENSORS_CHARACTERISTIC);
     }
+
 }

@@ -53,6 +53,7 @@ public class BluetoothLeService extends Service {
     private String mRemoteDeviceType;
     private int mConnectionState = STATE_DISCONNECTED;
     private HashMap<String, BluetoothGattCharacteristic> subscribedCharacteristics = new HashMap<>();
+    private List<BluetoothGattCharacteristic> charsToSubscribeTo = new ArrayList<>();
 
     private static final int STATE_DISCONNECTED = 0;
     private static final int STATE_CONNECTING = 1;
@@ -123,6 +124,17 @@ public class BluetoothLeService extends Service {
             Log.d(TAG,"Got notification");
             broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
         }
+
+        @Override
+        public void onDescriptorWrite (BluetoothGatt gatt,
+                                       BluetoothGattDescriptor descriptor,
+                                       int status) {
+            // We need to wait for this callback before enabling the next notification in case we
+            // have several in our list
+            if (!charsToSubscribeTo.isEmpty()) {
+                setCharacteristicNotification(charsToSubscribeTo.remove(0), true);
+            }
+        }
     };
 
     /**
@@ -155,11 +167,12 @@ public class BluetoothLeService extends Service {
                 uuid = gattCharacteristic.getUuid();
                 if (mCharacteristicsWanted.contains(uuid)) {
                     Log.d(TAG, "Found characteristic to subscribe to: " + uuid);
-                    setCharacteristicNotification(gattCharacteristic, true);
+                    charsToSubscribeTo.add(gattCharacteristic);
                 }
             }
         }
-
+        // We need to enable notifications asynchronously
+        setCharacteristicNotification(charsToSubscribeTo.remove(0), true);
     }
 
     private void broadcastUpdate(final String action) {
@@ -177,7 +190,12 @@ public class BluetoothLeService extends Service {
             int format = BluetoothGattCharacteristic.FORMAT_UINT8;
             final int buttonCode= characteristic.getIntValue(format, 0);
             Log.d(TAG, String.format("Received Button press: %d", buttonCode));
-            intent.putExtra(EXTRA_DATA, String.valueOf(buttonCode));
+            if (buttonCode == 32) {
+                // Shutter press
+                final Intent intent2 = new Intent("net.sourceforge.opencamera.action.CAMERA");
+                sendBroadcast(intent2);
+                return;
+            }
 
         } else if (KrakenGattAttributes.KRAKEN_SENSORS_CHARACTERISTIC.equals(uuid)) {
             Log.d(TAG, "Got Kraken sensor reading, discarding for now");
@@ -360,6 +378,7 @@ public class BluetoothLeService extends Service {
             Log.w(TAG, "BluetoothAdapter not initialized");
             return;
         }
+
         String uuid = characteristic.getUuid().toString();
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
         if (enabled) {
@@ -368,16 +387,9 @@ public class BluetoothLeService extends Service {
             subscribedCharacteristics.remove(uuid);
         }
 
-        // Some devices have a CLIENT_CHARACTERISTIC UUID that needs to be written to actually
-        // enable notifications
-        if (KrakenGattAttributes.HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())
-                || KrakenGattAttributes.KRAKEN_SENSORS_CHARACTERISTIC.equals(characteristic.getUuid())
-                || KrakenGattAttributes.KRAKEN_BUTTONS_CHARACTERISTIC.equals(characteristic.getUuid())
-            ) {
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(KrakenGattAttributes.CLIENT_CHARACTERISTIC_CONFIG);
-            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-            mBluetoothGatt.writeDescriptor(descriptor);
-        }
+        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(KrakenGattAttributes.CLIENT_CHARACTERISTIC_CONFIG);
+        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+        mBluetoothGatt.writeDescriptor(descriptor);
     }
 
     /**
