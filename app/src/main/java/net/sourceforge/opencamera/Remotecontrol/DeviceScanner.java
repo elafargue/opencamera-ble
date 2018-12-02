@@ -105,7 +105,7 @@ public class DeviceScanner extends ListActivity {
         });
 
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
-        String preference_remote_device_name = PreferenceKeys.getRemoteDeviceName();
+        String preference_remote_device_name = PreferenceKeys.RemoteName;
         String remote_name = mSharedPreferences.getString(preference_remote_device_name, "none");
         Log.d(TAG, "preference_remote_device_name: " + remote_name);
 
@@ -188,7 +188,7 @@ public class DeviceScanner extends ListActivity {
         if (device == null) return;
         Log.d(TAG, "onListItemClick");
         Log.d(TAG, device.getAddress());
-        String preference_remote_device_name = PreferenceKeys.getRemoteDeviceName();
+        String preference_remote_device_name = PreferenceKeys.RemoteName;
         SharedPreferences.Editor editor = mSharedPreferences.edit();
         editor.putString(preference_remote_device_name, device.getAddress());
         editor.apply();

@@ -72,6 +72,7 @@ public class MainUI {
 
 		this.setIcon(R.id.gallery);
 		this.setIcon(R.id.settings);
+		this.setIcon(R.id.kraken_icon);
 		this.setIcon(R.id.popup);
 		this.setIcon(R.id.exposure_lock);
 		this.setIcon(R.id.exposure);
@@ -261,7 +262,18 @@ public class MainUI {
 			layoutParams.addRule(right_of, 0);
 			view.setLayoutParams(layoutParams);
 			setViewRotation(view, ui_rotation);
-	
+
+			// Kraken diving case icon
+			view = main_activity.findViewById(R.id.kraken_icon);
+			layoutParams = (RelativeLayout.LayoutParams)view.getLayoutParams();
+			layoutParams.addRule(align_parent_top, RelativeLayout.TRUE);
+			layoutParams.addRule(align_parent_bottom, 0);
+			layoutParams.addRule(left_of, R.id.exposure);
+			layoutParams.addRule(right_of, 0);
+			view.setLayoutParams(layoutParams);
+			setViewRotation(view, ui_rotation);
+
+
 			/*view = main_activity.findViewById(R.id.switch_video);
 			layoutParams = (RelativeLayout.LayoutParams)view.getLayoutParams();
 			layoutParams.addRule(align_parent_top, RelativeLayout.TRUE);

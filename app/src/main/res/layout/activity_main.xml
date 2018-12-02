@@ -179,6 +179,17 @@
         />
 
     <ImageButton
+        android:id="@+id/kraken_icon"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="@string/action_settings"
+        android:src="@drawable/ic_kraken_icon"
+        />
+
+
+    <ImageButton
         android:id="@+id/exposure"
         android:layout_width="50dp"
         android:layout_height="50dp"

@@ -4,6 +4,7 @@ import net.sourceforge.opencamera.CameraController.CameraController;
 import net.sourceforge.opencamera.CameraController.CameraControllerManager2;
 import net.sourceforge.opencamera.Preview.Preview;
 import net.sourceforge.opencamera.Preview.VideoProfile;
+import net.sourceforge.opencamera.Remotecontrol.BluetoothLeService;
 import net.sourceforge.opencamera.UI.FolderChooserDialog;
 import net.sourceforge.opencamera.UI.MainUI;
 import net.sourceforge.opencamera.UI.ManualSeekbars;
@@ -19,7 +20,9 @@ import java.util.Locale;
 import java.util.Map;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.pm.PackageInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -36,6 +39,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.StatFs;
 import android.preference.PreferenceManager;
@@ -88,6 +92,8 @@ public class MainActivity extends Activity {
 	private Sensor mSensorAccelerometer;
 	private Sensor mSensorMagnetic;
 	private MainUI mainUI;
+	private BluetoothLeService mBluetoothLeService;
+	private String mRemoteDeviceAddress;
 	private PermissionHandler permissionHandler;
 	private SoundPoolManager soundPoolManager;
 	private ManualSeekbars manualSeekbars;
@@ -141,6 +147,27 @@ public class MainActivity extends Activity {
 	public volatile boolean test_have_angle;
 	public volatile float test_angle;
 	public volatile String test_last_saved_image;
+
+    // Code to manage Service lifecycle for remote control.
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder service) {
+            mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
+            if (!mBluetoothLeService.initialize()) {
+                Log.e(TAG, "Unable to initialize Bluetooth");
+                finish();
+            }
+            // Automatically connects to the device upon successful start-up initialization.
+            mBluetoothLeService.connect(mRemoteDeviceAddress);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            mBluetoothLeService = null;
+        }
+    };
+
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -312,7 +339,7 @@ public class MainActivity extends Activity {
 				longClickedGallery();
 				return true;
 			}
-        });
+             });
 		if( MyDebug.LOG )
 			Log.d(TAG, "onCreate: time after setting gallery long click listener: " + (System.currentTimeMillis() - debug_time));
 
@@ -476,6 +503,9 @@ public class MainActivity extends Activity {
         		});
             }
         }).start();
+
+        // Last: if BLE remote control is enabled, then start the background BLE service
+        startRemoteControl();
 
 		if( MyDebug.LOG )
 			Log.d(TAG, "onCreate: total time for Activity startup: " + (System.currentTimeMillis() - debug_time));
@@ -1018,6 +1048,15 @@ public class MainActivity extends Activity {
 	    	MainActivity.this.takePicture(false);
         }
     };
+
+    private void startRemoteControl() {
+        Log.d(TAG, "BLE Remote control service start check...");
+        if ( remoteEnabled()) {
+            Log.d(TAG, "Remote enabled, starting service");
+            Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
+            bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+        }
+    }
 
 	@Override
     protected void onResume() {
@@ -3795,6 +3834,19 @@ public class MainActivity extends Activity {
 			speechRecognizer = null;
 		}
 	}
+
+    /**
+     * Checks if remote control is enabled in the settings, and the remote control address
+     * is also defined
+     * @return true if this is the case
+     */
+	public boolean remoteEnabled() {
+		SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+		Boolean remote_enabled = sharedPreferences.getBoolean(PreferenceKeys.EnableRemote, false);
+		mRemoteDeviceAddress = sharedPreferences.getString(PreferenceKeys.RemoteName, "undefined");
+		return remote_enabled && !mRemoteDeviceAddress.equals("undefined");
+	}
+
 	
 	public boolean hasAudioControl() {
 		SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);

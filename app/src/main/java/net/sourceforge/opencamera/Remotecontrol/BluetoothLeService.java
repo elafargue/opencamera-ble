@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package net.sourceforge.opencamera;
+package net.sourceforge.opencamera.Remotecontrol;
 
-import android.annotation.TargetApi;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -30,11 +29,8 @@ import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
-import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
-
-import net.sourceforge.opencamera.Remotecontrol.KrakenGattAttributes;
 
 import java.util.List;
 import java.util.UUID;
@@ -157,13 +153,14 @@ public class BluetoothLeService extends Service {
     }
 
     public class LocalBinder extends Binder {
-        BluetoothLeService getService() {
+        public BluetoothLeService getService() {
             return BluetoothLeService.this;
         }
     }
 
     @Override
     public IBinder onBind(Intent intent) {
+        Log.d(TAG, "Starting OpenCamera Bluetooth Service");
         return mBinder;
     }
 

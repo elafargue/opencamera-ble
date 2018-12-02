@@ -110,7 +110,7 @@ public class MyPreferenceFragment extends PreferenceFragment implements OnShared
 		//readFromBundle(bundle, "isos", Preview.getISOPreferenceKey(), "auto", "preference_category_camera_effects");
 		//readFromBundle(bundle, "exposures", "preference_exposure", "0", "preference_category_camera_effects");
 
-		String preference_remote_device_name = PreferenceKeys.getRemoteDeviceName();
+		String preference_remote_device_name = PreferenceKeys.RemoteName;
 		String remote_name = sharedPreferences.getString(preference_remote_device_name, "default");
 		Log.d(TAG, "preference_remote_device_name: " + remote_name);
 

@@ -139,6 +139,10 @@ public class PreferenceKeys {
 
 	public static final String FrontCameraMirrorKey = "preference_front_camera_mirror";
 
+	public static final String EnableRemote = "preference_enable_remote";
+
+	public static final String RemoteName = "preference_remote_device_name";
+
 	//public static final String BackgroundPhotoSavingPreferenceKey = "preference_background_photo_saving";
 
 	public static final String Camera2FakeFlashPreferenceKey = "preference_camera2_fake_flash";
@@ -262,10 +266,6 @@ public class PreferenceKeys {
     public static String getVideoCaptureRatePreferenceKey(int cameraId) {
     	return "preference_capture_rate_" + cameraId;
     }
-
-    public static String getRemoteDeviceName() {
-    	return "preference_remote_device_name";
-	}
 
 	public static final String VideoLogPreferenceKey = "preference_video_log";
 
