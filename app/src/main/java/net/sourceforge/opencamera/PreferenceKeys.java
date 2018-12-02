@@ -263,6 +263,10 @@ public class PreferenceKeys {
     	return "preference_capture_rate_" + cameraId;
     }
 
+    public static String getRemoteDeviceName() {
+    	return "preference_remote_device_name";
+	}
+
 	public static final String VideoLogPreferenceKey = "preference_video_log";
 
     public static String getVideoMaxDurationPreferenceKey() {

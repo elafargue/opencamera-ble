@@ -6,6 +6,7 @@ _saved/
 
 .gradle/
 .idea/
+.DS_Store
 build/
 app/release/
 gfx/

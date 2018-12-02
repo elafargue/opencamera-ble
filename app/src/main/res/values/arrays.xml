@@ -763,4 +763,14 @@
         <item>preference_units_distance_m</item>
         <item>preference_units_distance_ft</item>
     </string-array>
+    <string-array name="preference_remote_type_entries">
+        <item>@string/preference_remote_type_none</item>
+        <item>@string/preference_remote_type_kraken</item>
+    </string-array>
+    <string-array name="preference_remote_type_values">
+        <item>preference_remote_type_none</item>
+        <item>preference_remote_type_kraken</item>
+    </string-array>
+    <string name="preference_remote_type_none">No remote</string>
+    <string name="preference_remote_type_kraken">Kraken Smart Housing</string>
 </resources>
