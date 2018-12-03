@@ -1097,18 +1097,37 @@ public class MainActivity extends Activity {
                 int command = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, -1);
                 switch (command) {
                     case BluetoothLeService.COMMAND_SHUTTER:
+                        // Easiest - just take a picture (or start/stop camera)
                         MainActivity.this.takePicture(false);
                         break;
                     case BluetoothLeService.COMMAND_MODE:
+                        // "Mode" key :either toggles photo/video mode, or
+                        // closes the settings screen that is currently open
                         if (mainUI.popupIsOpen()) {
                             mainUI.togglePopupSettings();
+                        } else if (mainUI.isExposureUIOpen()) {
+                            mainUI.toggleExposureUI();
                         } else {
                             clickedSwitchVideo(null);
                         }
                         break;
 					case BluetoothLeService.COMMAND_MENU:
+					    // Open the exposure UI (ISO/Exposure) or
+                        // select the current line on an open UI or
+                        // select the current option on a button on a selected line
 					    if (!mainUI.popupIsOpen()) {
-                            mainUI.togglePopupSettings();
+					        if (! mainUI.isExposureUIOpen()) {
+                                mainUI.toggleExposureUI();
+                            } else {
+                                if (mainUI.isSelectingExposureUIElement()) {
+                                    // Close Exposure UI if new press on MENU
+                                    // while already selecting
+                                    mainUI.toggleExposureUI();
+                                } else {
+                                    // Select current element in Exposure UI
+                                    mainUI.selectExposureUIElement();
+                                }
+                            }
                         } else {
 					        if (mainUI.selectingIcons()) {
 					           mainUI.clickSelectedIcon();
@@ -1122,6 +1141,12 @@ public class MainActivity extends Activity {
 					        mainUI.previousPopupIcon();
                         } else if (mainUI.selectingLines()){
                             mainUI.previousPopupLine();
+                        } else if (mainUI.isExposureUIOpen()) {
+					        if (mainUI.isSelectingExposureUIElement()) {
+					            mainUI.previousExposureUIItem();
+                            } else {
+                                mainUI.nextExposureUILine();
+                            }
                         }
 						break;
                     case BluetoothLeService.COMMAND_DOWN:
@@ -1129,7 +1154,21 @@ public class MainActivity extends Activity {
                             mainUI.nextPopupIcon();
                         } else if (mainUI.selectingLines()){
                             mainUI.nextPopupLine();
+                        } else if (mainUI.isExposureUIOpen()) {
+                            if (mainUI.isSelectingExposureUIElement()) {
+                                mainUI.nextExposureUIItem();
+                            } else {
+                                mainUI.nextExposureUILine();
+                            }
                         }
+                        break;
+                    case BluetoothLeService.COMMAND_AFMF:
+                        // Open the camera settings popup menu (not the app settings)
+                        // or selects the current line/icon in the popup menu, and finally
+                        // clicks the icon
+                        //if (!mainUI.popupIsOpen()) {
+                            mainUI.togglePopupSettings();
+                        //}
                         break;
                     default:
                         break;

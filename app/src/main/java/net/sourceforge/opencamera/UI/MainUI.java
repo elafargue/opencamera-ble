@@ -69,6 +69,9 @@ public class MainUI {
 	private View mHighlightedIcon;
 	private Boolean mSelectingIcons = false;
 	private Boolean mSelectingLines = false;
+	private int mExposureLine = 0;
+	private Boolean mSelectingExposureUIElement = false;
+
 
 	// for testing:
 	private final Map<String, View> test_ui_buttons = new Hashtable<>();
@@ -819,7 +822,7 @@ public class MainUI {
 		view.setContentDescription( main_activity.getResources().getString(R.string.audio_control_start) );
     }
 
-    private boolean isExposureUIOpen() {
+    public boolean isExposureUIOpen() {
 		View exposure_seek_bar = main_activity.findViewById(R.id.exposure_container);
 		int exposure_visibility = exposure_seek_bar.getVisibility();
 		View manual_exposure_seek_bar = main_activity.findViewById(R.id.manual_exposure_container);
@@ -827,6 +830,9 @@ public class MainUI {
 		return exposure_visibility == View.VISIBLE || manual_exposure_visibility == View.VISIBLE;
 	}
 
+    /**
+     * Opens or close the exposure settings (ISO, white balance, etc)
+     */
     public void toggleExposureUI() {
 		if( MyDebug.LOG )
 			Log.d(TAG, "toggleExposureUI");
@@ -836,8 +842,123 @@ public class MainUI {
 		}
 		else if( main_activity.getPreview().getCameraController() != null ) {
 			setupExposureUI();
+            highlightExposureUIElement();
+            mSelectingExposureUIElement = false;
 		}
     }
+
+    /**
+     * Highlights the exposure or ISO settings
+     * and un-highlight the other
+     */
+    private void  highlightExposureUIElement() {
+        if (!isExposureUIOpen()) { // Safety check
+            return;
+        }
+        ViewGroup iso_buttons_container = main_activity.findViewById(R.id.iso_buttons);
+        View exposure_seek_bar = main_activity.findViewById(R.id.exposure_container);
+        if (iso_buttons_container == null || exposure_seek_bar == null)
+            return;
+        mExposureLine = mExposureLine % 2; // Highlight the next element
+        // Right now we just have 2 settings: ISO and Exposure
+        if (mExposureLine == 0) {
+            iso_buttons_container.setBackgroundColor(Color.RED);
+            iso_buttons_container.setAlpha(0.5f);
+            exposure_seek_bar.setBackgroundColor(Color.TRANSPARENT);
+            exposure_seek_bar.setAlpha(1.0f);
+        } else if (mExposureLine == 1) {
+            iso_buttons_container.setBackgroundColor(Color.TRANSPARENT);
+            iso_buttons_container.setAlpha(1f);
+            exposure_seek_bar.setBackgroundColor(Color.RED);
+            exposure_seek_bar.setAlpha(0.5f);
+        }
+    }
+
+    public void nextExposureUILine() {
+        mExposureLine++;
+        highlightExposureUIElement();
+    }
+
+    public void nextExposureUIItem() {
+        if (mExposureLine == 0)
+            nextIsoItem(false);
+    }
+
+    public void previousExposureUIItem() {
+        if (mExposureLine == 0)
+            nextIsoItem(true);
+    }
+
+    private void nextIsoItem(Boolean previous) {
+        // Find current ISO
+        final SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(main_activity);
+        String current_iso = sharedPreferences.getString(PreferenceKeys.ISOPreferenceKey, CameraController.ISO_DEFAULT);
+        int count = iso_buttons.size();
+        int step = previous ? -1 : 1;
+        for(int i = 0; i < count; i++) {
+            Button button= (Button) iso_buttons.get(i);
+            String button_text = "" + button.getText();
+            if( button_text.contains(current_iso) ) {
+                // Select next one, unles it's "Manual", which we skip since
+                // it's not practical in remote mode.
+                Button nextButton = (Button) iso_buttons.get((i + count + step)%count);
+                String nextButton_text = "" + nextButton.getText();
+                if (nextButton_text.contains("m")) {
+                    nextButton = (Button) iso_buttons.get((i+count+ 2*step)%count);
+                }
+                nextButton.callOnClick();
+                break;
+            }
+        }
+    }
+
+
+    /**
+     * Select element on exposure UI
+     */
+    public void  selectExposureUIElement() {
+        if (!isExposureUIOpen()) { // Safety check
+            return;
+        }
+        ViewGroup iso_buttons_container = main_activity.findViewById(R.id.iso_buttons);
+        View exposure_seek_bar = main_activity.findViewById(R.id.exposure_container);
+        if (iso_buttons_container == null || exposure_seek_bar == null)
+            return;
+        // Right now we just have 2 settings: ISO and Exposure
+        if (mExposureLine == 0) {
+            iso_buttons_container.setBackgroundColor(Color.TRANSPARENT);
+            iso_buttons_container.setAlpha(1f);
+            final SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(main_activity);
+            String current_iso = sharedPreferences.getString(PreferenceKeys.ISOPreferenceKey, CameraController.ISO_DEFAULT);
+            // if the manual ISO value isn't one of the "preset" values, then instead highlight the manual ISO icon
+            if( MyDebug.LOG )
+                Log.d(TAG, "current_iso: " + current_iso);
+            boolean found = false;
+            for(View view : iso_buttons) {
+                Button button = (Button)view;
+                if( MyDebug.LOG )
+                    Log.d(TAG, "button: " + button.getText());
+                String button_text = "" + button.getText();
+                if( button_text.contains(current_iso) ) {
+                    PopupView.setButtonSelected(button, true);
+                    button.setBackgroundColor(Color.RED);
+                    found = true;
+                }
+                else {
+                    PopupView.setButtonSelected(button, false);
+                    button.setBackgroundColor(Color.TRANSPARENT);
+                }
+            }
+            mSelectingExposureUIElement = true;
+        } else if (mExposureLine == 1) {
+
+        }
+    }
+
+    public Boolean isSelectingExposureUIElement() {
+        return mSelectingExposureUIElement;
+    }
+
 
     private List<View> iso_buttons;
 	private int iso_button_manual_index = -1;
@@ -1216,6 +1337,13 @@ public class MainUI {
 		}
 	}
 
+    /**
+     * Highlights an icon on a horizontal line, such as flash mode,
+     * focus mode, etc. Checks that the popup is open in case it is
+     * wrongly called, so that it doesn't crash the app.
+     * @param highlight
+     * @param goLeft
+     */
 	public void highlightPopupIcon(Boolean highlight, Boolean goLeft) {
 		if (!popupIsOpen()) { // Safety check
 			clearSelectionState();
@@ -1244,6 +1372,10 @@ public class MainUI {
 		}
 	}
 
+    /**
+     * Select the next line on the settings popup. Called by MainActivity
+     * when receiving a remote control command.
+     */
 	public void nextPopupLine() {
 		highlightPopupLine(false, false);
 		mPopupLine++;
@@ -1268,6 +1400,9 @@ public class MainUI {
 		highlightPopupIcon(true, true);
 	}
 
+    /**
+     * Simulates a press on the currently selected icon
+     */
 	public void clickSelectedIcon() {
 		if (mHighlightedIcon != null) {
 			mHighlightedIcon.callOnClick();
@@ -1287,6 +1422,10 @@ public class MainUI {
 		mHighlightedLine = null;
 	}
 
+    /**
+     * Opens or closes the settings popup on the camera preview. The popup that
+     * differs depending whether we're in photo or video mode
+     */
 	public void togglePopupSettings() {
 		final ViewGroup popup_container = main_activity.findViewById(R.id.popup_container);
 		if( popupIsOpen() ) {
@@ -1331,11 +1470,13 @@ public class MainUI {
     	}
 		popup_view_is_open = true;
 
-		// For remote control, we want to highlight lines and icons on the popup view
-		// so that we can control those just with the up/down buttons and "OK"
-		clearSelectionState();
-		mSelectingLines = true;
-		highlightPopupLine(true, false);
+	    if (main_activity.remoteEnabled()) {
+            // For remote control, we want to highlight lines and icons on the popup view
+            // so that we can control those just with the up/down buttons and "OK"
+            clearSelectionState();
+            mSelectingLines = true;
+            highlightPopupLine(true, false);
+        }
 		
         // need to call layoutUI to make sure the new popup is oriented correctly
 		// but need to do after the layout has been done, so we have a valid width/height to use
