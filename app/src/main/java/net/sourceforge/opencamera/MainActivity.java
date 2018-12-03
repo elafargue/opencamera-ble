@@ -1100,7 +1100,36 @@ public class MainActivity extends Activity {
                         MainActivity.this.takePicture(false);
                         break;
                     case BluetoothLeService.COMMAND_MODE:
-                        clickedSwitchVideo(null);
+                        if (mainUI.popupIsOpen()) {
+                            mainUI.togglePopupSettings();
+                        } else {
+                            clickedSwitchVideo(null);
+                        }
+                        break;
+					case BluetoothLeService.COMMAND_MENU:
+					    if (!mainUI.popupIsOpen()) {
+                            mainUI.togglePopupSettings();
+                        } else {
+					        if (mainUI.selectingIcons()) {
+					           mainUI.clickSelectedIcon();
+                            } else {
+                                mainUI.highlightPopupIcon(true, false);
+                            }
+                        }
+                        break;
+					case BluetoothLeService.COMMAND_UP:
+					    if (mainUI.selectingIcons()) {
+					        mainUI.previousPopupIcon();
+                        } else if (mainUI.selectingLines()){
+                            mainUI.previousPopupLine();
+                        }
+						break;
+                    case BluetoothLeService.COMMAND_DOWN:
+                        if (mainUI.selectingIcons()) {
+                            mainUI.nextPopupIcon();
+                        } else if (mainUI.selectingLines()){
+                            mainUI.nextPopupLine();
+                        }
                         break;
                     default:
                         break;
@@ -1357,6 +1386,11 @@ public class MainActivity extends Activity {
 		return cameraId;
     }
 
+    /**
+     * Selects the next camera on the phone - in practice, switches between
+     * front and back cameras
+     * @param view
+     */
     public void clickedSwitchCamera(View view) {
 		if( MyDebug.LOG )
 			Log.d(TAG, "clickedSwitchCamera");
@@ -1378,6 +1412,10 @@ public class MainActivity extends Activity {
 		}
     }
 
+    /**
+     * Toggles Photo/Video mode
+     * @param view
+     */
     public void clickedSwitchVideo(View view) {
 		if( MyDebug.LOG )
 			Log.d(TAG, "clickedSwitchVideo");

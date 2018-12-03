@@ -28,6 +28,7 @@ import android.view.animation.Animation;
 import android.view.animation.ScaleAnimation;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.ZoomControls;
@@ -59,6 +60,15 @@ public class MainUI {
 
 	private boolean keydown_volume_up;
 	private boolean keydown_volume_down;
+
+	// For remote control: keep track of the currently highlighted
+	// line and icon within the line
+	private int mPopupLine = 0;
+	private int mPopupIcon = 0;
+	private LinearLayout mHighlightedLine;
+	private View mHighlightedIcon;
+	private Boolean mSelectingIcons = false;
+	private Boolean mSelectingLines = false;
 
 	// for testing:
 	private final Map<String, View> test_ui_buttons = new Hashtable<>();
@@ -1150,8 +1160,16 @@ public class MainUI {
     public boolean popupIsOpen() {
     	return popup_view_is_open;
     }
-    
-    public void destroyPopup() {
+
+	public boolean selectingIcons() {
+		return mSelectingIcons;
+	}
+
+	public boolean selectingLines() {
+		return mSelectingLines;
+	}
+
+	public void destroyPopup() {
 		if( MyDebug.LOG )
 			Log.d(TAG, "destroyPopup");
 		force_destroy_popup = false;
@@ -1163,10 +1181,119 @@ public class MainUI {
 		popup_view = null;
     }
 
-    public void togglePopupSettings() {
+	/**
+	 * Higlights the next LinearLayout view
+	 * @param highlight
+	 */
+	private void highlightPopupLine(Boolean highlight, Boolean goUp) {
+		if (!popupIsOpen()) { // Safety check
+			clearSelectionState();
+			return;
+		}
+		final ViewGroup popup_container = main_activity.findViewById(R.id.popup_container);
+		final LinearLayout inside = (LinearLayout) popup_container.getChildAt(0);
+		if (inside == null)
+			return; // Safety check
+		int count = inside.getChildCount();
+		Boolean foundLine = false;
+		while (!foundLine) {
+			// Ensure we stay within our bounds:
+			mPopupLine = (mPopupLine + count ) % count;
+			View v = inside.getChildAt(mPopupLine);
+			if (v instanceof LinearLayout ) {
+				if (highlight) {
+					v.setBackgroundColor(Color.RED);
+					v.setAlpha(0.5f);
+					mHighlightedLine = (LinearLayout) v;
+				} else {
+					v.setBackgroundColor(Color.BLACK);
+					v.setAlpha(0.9f);
+				}
+				foundLine = true;
+			} else {
+				mPopupLine += goUp ? -1 : 1;
+			}
+		}
+	}
+
+	public void highlightPopupIcon(Boolean highlight, Boolean goLeft) {
+		if (!popupIsOpen()) { // Safety check
+			clearSelectionState();
+			return;
+		}
+		highlightPopupLine(false, false);
+		int count = mHighlightedLine.getChildCount();
+		Boolean foundIcon = false;
+		while (!foundIcon) {
+			// Ensure we stay within our bounds:
+			// (careful, modulo in Java will allow negative numbers, hence the line below:
+			mPopupIcon= (mPopupIcon + count ) % count;
+			View v = mHighlightedLine.getChildAt(mPopupIcon);
+			if (v instanceof ImageButton || v instanceof Button ) {
+				if (highlight) {
+					v.setBackgroundColor(Color.RED);
+					mHighlightedIcon = v;
+					mSelectingIcons = true;
+				} else {
+					v.setBackgroundColor(Color.TRANSPARENT);
+				}
+				foundIcon = true;
+			} else {
+				mPopupIcon+= goLeft ? -1 : 1;
+			}
+		}
+	}
+
+	public void nextPopupLine() {
+		highlightPopupLine(false, false);
+		mPopupLine++;
+		highlightPopupLine(true, false);
+	}
+
+	public void previousPopupLine() {
+		highlightPopupLine(false, true);
+		mPopupLine--;
+		highlightPopupLine(true, true);
+	}
+
+	public void nextPopupIcon() {
+		highlightPopupIcon(false, false);
+		mPopupIcon++;
+		highlightPopupIcon(true, false);
+	}
+
+	public void previousPopupIcon() {
+		highlightPopupIcon(false, true);
+		mPopupIcon--;
+		highlightPopupIcon(true, true);
+	}
+
+	public void clickSelectedIcon() {
+		if (mHighlightedIcon != null) {
+			mHighlightedIcon.callOnClick();
+		}
+	}
+
+	/**
+	 * Ensure all our selection tracking variables are cleared when we
+	 * exit menu selection (used in remote control mode)
+	 */
+	private void clearSelectionState() {
+		mPopupLine = 0;
+		mPopupIcon = 0;
+		mSelectingIcons = false;
+		mSelectingLines = false;
+		mHighlightedIcon= null;
+		mHighlightedLine = null;
+	}
+
+	public void togglePopupSettings() {
 		final ViewGroup popup_container = main_activity.findViewById(R.id.popup_container);
 		if( popupIsOpen() ) {
 			closePopup();
+			highlightPopupLine(false, false);
+			highlightPopupIcon(false, false);
+			clearSelectionState();
 			return;
 		}
 		if( main_activity.getPreview().getCameraController() == null ) {
@@ -1203,6 +1330,12 @@ public class MainUI {
 			popup_view.setVisibility(View.VISIBLE);
     	}
 		popup_view_is_open = true;
+
+		// For remote control, we want to highlight lines and icons on the popup view
+		// so that we can control those just with the up/down buttons and "OK"
+		clearSelectionState();
+		mSelectingLines = true;
+		highlightPopupLine(true, false);
 		
         // need to call layoutUI to make sure the new popup is oriented correctly
 		// but need to do after the layout has been done, so we have a valid width/height to use

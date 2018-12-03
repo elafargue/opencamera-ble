@@ -33,6 +33,9 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
+import net.sourceforge.opencamera.MainActivity;
+import net.sourceforge.opencamera.MyDebug;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -76,6 +79,11 @@ public class BluetoothLeService extends Service {
             "net.sourceforge.opencamera.Remotecontrol.EXTRA_DATA";
     public final static int COMMAND_SHUTTER = 0;
     public final static int COMMAND_MODE = 1;
+    public final static int COMMAND_MENU = 2;
+    public final static int COMMAND_AFMF = 3;
+    public final static int COMMAND_UP = 4;
+    public final static int COMMAND_DOWN = 5;
+
 
 
     public void setRemoteDeviceType(String remoteDeviceType) {
@@ -139,7 +147,8 @@ public class BluetoothLeService extends Service {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
-            Log.d(TAG,"Got notification");
+            if (MyDebug.LOG)
+                Log.d(TAG,"Got notification");
             broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
         }
 
@@ -208,6 +217,10 @@ public class BluetoothLeService extends Service {
             Log.d(TAG,"Got Kraken button press");
             final int buttonCode= characteristic.getIntValue(format_uint8, 0);
             Log.d(TAG, String.format("Received Button press: %d", buttonCode));
+            // Note: we stay at a fairly generic level here and will manage variants
+            // on the various button actions in MainActivity, because those will change depending
+            // on the current state of the app, and we don't want to know anything about that state
+            // from the Bluetooth LE service
             if (buttonCode == 32) {
                 // Shutter press
                 action = ACTION_REMOTE_COMMAND;
@@ -216,6 +229,22 @@ public class BluetoothLeService extends Service {
                 // "Mode" button: either "back" action or "Photo/Camera" switch
                 action = ACTION_REMOTE_COMMAND;
                 remoteCommand = COMMAND_MODE;
+            } else if (buttonCode == 48) {
+                // "Menu" button
+                action = ACTION_REMOTE_COMMAND;
+                remoteCommand = COMMAND_MENU;
+            } else if (buttonCode == 97) {
+                // AF/MF button
+                action = ACTION_REMOTE_COMMAND;
+                remoteCommand = COMMAND_AFMF;
+            } else if (buttonCode == 64) {
+                // Up button
+                action = ACTION_REMOTE_COMMAND;
+                remoteCommand = COMMAND_UP;
+            } else if (buttonCode == 80) {
+                // Down button
+                action = ACTION_REMOTE_COMMAND;
+                remoteCommand = COMMAND_DOWN;
             }
             /*
             TODO: Manage the key presses on the housing to control
@@ -223,7 +252,8 @@ public class BluetoothLeService extends Service {
             */
         } else if (KrakenGattAttributes.KRAKEN_SENSORS_CHARACTERISTIC.equals(uuid)) {
             float temperature = characteristic.getIntValue(format_uint8, 2) / 10;
-            Log.d(TAG, "Got Kraken sensor reading. Temperature: " + temperature);
+            if (MyDebug.LOG)
+                Log.d(TAG, "Got Kraken sensor reading. Temperature: " + temperature);
             return;
         }
 
