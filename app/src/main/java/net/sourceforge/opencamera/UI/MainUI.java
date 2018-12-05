@@ -837,13 +837,15 @@ public class MainUI {
 		if( MyDebug.LOG )
 			Log.d(TAG, "toggleExposureUI");
 		closePopup();
+        mSelectingExposureUIElement = false;
 		if( isExposureUIOpen() ) {
 			clearSeekBar();
 		}
 		else if( main_activity.getPreview().getCameraController() != null ) {
 			setupExposureUI();
-            highlightExposureUIElement();
-            mSelectingExposureUIElement = false;
+            if (main_activity.remoteEnabled()) {
+                highlightExposureUIElement();
+            }
 		}
     }
 
