@@ -1063,11 +1063,6 @@ public class MainActivity extends Activity {
     /**
      * Receives event from the remote command handler through intents
      * Handles various events fired by the Service.
-     *  ACTION_GATT_CONNECTED: connected to a GATT server.
-     *  ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
-     *  ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
-     *  ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read
-     *                         or notification operations.
      */
     private final BroadcastReceiver remoteControlCommandReceiver = new BroadcastReceiver() {
         @Override
@@ -1095,6 +1090,7 @@ public class MainActivity extends Activity {
                 // displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
             } else if (BluetoothLeService.ACTION_REMOTE_COMMAND.equals(action)) {
                 int command = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, -1);
+                // TODO: we could abstract this into a method provided by each remote control model
                 switch (command) {
                     case BluetoothLeService.COMMAND_SHUTTER:
                         // Easiest - just take a picture (or start/stop camera)
@@ -1125,7 +1121,7 @@ public class MainActivity extends Activity {
                                     mainUI.toggleExposureUI();
                                 } else {
                                     // Select current element in Exposure UI
-                                    mainUI.selectExposureUIElement();
+                                    mainUI.selectExposureUILine();
                                 }
                             }
                         } else {
@@ -1137,26 +1133,32 @@ public class MainActivity extends Activity {
                         }
                         break;
 					case BluetoothLeService.COMMAND_UP:
-					    if (mainUI.selectingIcons()) {
-					        mainUI.previousPopupIcon();
-                        } else if (mainUI.selectingLines()){
-                            mainUI.previousPopupLine();
+					    if (mainUI.popupIsOpen()) {
+                            if (mainUI.selectingIcons()) {
+                                mainUI.nextPopupIcon();
+                            } else if (mainUI.selectingLines()) {
+                                mainUI.previousPopupLine();
+                            }
                         } else if (mainUI.isExposureUIOpen()) {
 					        if (mainUI.isSelectingExposureUIElement()) {
-					            mainUI.previousExposureUIItem();
+					            mainUI.nextExposureUIItem();
                             } else {
-                                mainUI.nextExposureUILine();
+                                mainUI.previousExposureUILine();
                             }
+                        } else {
+					        // Default up behaviour:
+                            // - if we are on manual focus, then adjust focus.
+                            // - if we are on autofocus, then adjust zoom.
                         }
 						break;
                     case BluetoothLeService.COMMAND_DOWN:
                         if (mainUI.selectingIcons()) {
-                            mainUI.nextPopupIcon();
+                            mainUI.previousPopupIcon();
                         } else if (mainUI.selectingLines()){
                             mainUI.nextPopupLine();
                         } else if (mainUI.isExposureUIOpen()) {
                             if (mainUI.isSelectingExposureUIElement()) {
-                                mainUI.nextExposureUIItem();
+                                mainUI.previousExposureUIItem();
                             } else {
                                 mainUI.nextExposureUILine();
                             }

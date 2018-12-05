@@ -237,6 +237,10 @@ public class BluetoothLeService extends Service {
                 // AF/MF button
                 action = ACTION_REMOTE_COMMAND;
                 remoteCommand = COMMAND_AFMF;
+            } else if (buttonCode == 96) {
+                // Long press on MF/AF button.
+                // Note: the camera issues button code 97 first, then
+                // 96 after one second of continuous press
             } else if (buttonCode == 64) {
                 // Up button
                 action = ACTION_REMOTE_COMMAND;

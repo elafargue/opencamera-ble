@@ -844,7 +844,7 @@ public class MainUI {
 		else if( main_activity.getPreview().getCameraController() != null ) {
 			setupExposureUI();
             if (main_activity.remoteEnabled()) {
-                highlightExposureUIElement();
+                highlightExposureUILine(true);
             }
 		}
     }
@@ -852,33 +852,58 @@ public class MainUI {
     /**
      * Highlights the exposure or ISO settings
      * and un-highlight the other
+     *
      */
-    private void  highlightExposureUIElement() {
+    private void highlightExposureUILine(Boolean selectNext) {
         if (!isExposureUIOpen()) { // Safety check
             return;
         }
-        ViewGroup iso_buttons_container = main_activity.findViewById(R.id.iso_buttons);
+        ViewGroup iso_buttons_container = main_activity.findViewById(R.id.iso_buttons); // Always shown
         View exposure_seek_bar = main_activity.findViewById(R.id.exposure_container);
-        if (iso_buttons_container == null || exposure_seek_bar == null)
-            return;
-        mExposureLine = mExposureLine % 2; // Highlight the next element
-        // Right now we just have 2 settings: ISO and Exposure
+        View shutter_seekbar = main_activity.findViewById(R.id.exposure_time_seekbar);
+        View iso_seekbar = main_activity.findViewById(R.id.iso_seekbar);
+        // Our order for lines is:
+        // - ISO buttons
+        // - ISO slider
+        // - Shutter speed
+        // - exposure seek bar
+        if (mExposureLine == 1 && !iso_seekbar.isShown())
+            mExposureLine += selectNext ? 1 : -1;
+        if (mExposureLine == 2 && !shutter_seekbar.isShown())
+            mExposureLine += selectNext ? 1 : -1;
+        if ((mExposureLine == 3 || mExposureLine == -1 ) && !exposure_seek_bar.isShown())
+            mExposureLine += selectNext ? 1 : -1;
+        mExposureLine = ( mExposureLine  + 4 )% 4;
+        // Set all lines to black
+        iso_buttons_container.setBackgroundColor(Color.TRANSPARENT);
+        exposure_seek_bar.setBackgroundColor(Color.TRANSPARENT);
+        shutter_seekbar.setBackgroundColor(Color.TRANSPARENT);
+        iso_seekbar.setBackgroundColor(Color.TRANSPARENT);
+
         if (mExposureLine == 0) {
             iso_buttons_container.setBackgroundColor(Color.RED);
             iso_buttons_container.setAlpha(0.5f);
-            exposure_seek_bar.setBackgroundColor(Color.TRANSPARENT);
-            exposure_seek_bar.setAlpha(1.0f);
+            return;
         } else if (mExposureLine == 1) {
-            iso_buttons_container.setBackgroundColor(Color.TRANSPARENT);
-            iso_buttons_container.setAlpha(1f);
-            exposure_seek_bar.setBackgroundColor(Color.RED);
-            exposure_seek_bar.setAlpha(0.5f);
+           iso_seekbar.setBackgroundColor(Color.RED);
+           iso_seekbar.setAlpha(0.5f);
+        } else if (mExposureLine == 2) {
+            shutter_seekbar.setBackgroundColor(Color.RED);
+            shutter_seekbar.setAlpha(0.5f);
+        } else if (mExposureLine == 3) { //
+                exposure_seek_bar.setBackgroundColor(Color.RED);
+                exposure_seek_bar.setAlpha(0.5f);
         }
     }
 
     public void nextExposureUILine() {
         mExposureLine++;
-        highlightExposureUIElement();
+        highlightExposureUILine(true);
+    }
+
+    public void previousExposureUILine() {
+        mExposureLine--;
+        highlightExposureUILine(false);
     }
 
     public void nextExposureUIItem() {
@@ -897,11 +922,13 @@ public class MainUI {
         String current_iso = sharedPreferences.getString(PreferenceKeys.ISOPreferenceKey, CameraController.ISO_DEFAULT);
         int count = iso_buttons.size();
         int step = previous ? -1 : 1;
+        Boolean found = false;
         for(int i = 0; i < count; i++) {
             Button button= (Button) iso_buttons.get(i);
             String button_text = "" + button.getText();
             if( button_text.contains(current_iso) ) {
-                // Select next one, unles it's "Manual", which we skip since
+                found = true;
+                // Select next one, unless it's "Manual", which we skip since
                 // it's not practical in remote mode.
                 Button nextButton = (Button) iso_buttons.get((i + count + step)%count);
                 String nextButton_text = "" + nextButton.getText();
@@ -912,13 +939,21 @@ public class MainUI {
                 break;
             }
         }
+        if (!found) {
+            // For instance, we are in ISO manual mode and "M" is selected. default
+            // back to "Auto" to avoid being stuck since we're with a remote control
+            iso_buttons.get(0).callOnClick();
+        }
     }
 
 
     /**
-     * Select element on exposure UI
+     * Select element on exposure UI.
+     * Right now we only support ISO and exposure compensation, which is the
+     *   case when ISO is 'auto'. When ISO is not auto, then the sliders are
+     *   "ISO" and "Shutter speed".
      */
-    public void  selectExposureUIElement() {
+    public void selectExposureUILine() {
         if (!isExposureUIOpen()) { // Safety check
             return;
         }
@@ -936,6 +971,7 @@ public class MainUI {
             if( MyDebug.LOG )
                 Log.d(TAG, "current_iso: " + current_iso);
             boolean found = false;
+            Button manualButton = null;
             for(View view : iso_buttons) {
                 Button button = (Button)view;
                 if( MyDebug.LOG )
@@ -944,12 +980,22 @@ public class MainUI {
                 if( button_text.contains(current_iso) ) {
                     PopupView.setButtonSelected(button, true);
                     button.setBackgroundColor(Color.RED);
+                    button.setAlpha(0.3f);
                     found = true;
                 }
                 else {
+                    if (button_text.contains("m")) {
+                        manualButton = button;
+                    }
                     PopupView.setButtonSelected(button, false);
                     button.setBackgroundColor(Color.TRANSPARENT);
                 }
+            }
+            if (!found && manualButton != null) {
+                // We are in manual ISO, highlight the "M" button
+                PopupView.setButtonSelected(manualButton, true);
+                manualButton.setBackgroundColor(Color.RED);
+                manualButton.setAlpha(0.3f);
             }
             mSelectingExposureUIElement = true;
         } else if (mExposureLine == 1) {
@@ -1326,11 +1372,11 @@ public class MainUI {
 			if (v instanceof LinearLayout ) {
 				if (highlight) {
 					v.setBackgroundColor(Color.RED);
-					v.setAlpha(0.5f);
+					v.setAlpha(0.3f);
 					mHighlightedLine = (LinearLayout) v;
 				} else {
-					v.setBackgroundColor(Color.BLACK);
-					v.setAlpha(0.9f);
+					v.setBackgroundColor(Color.TRANSPARENT);
+					v.setAlpha(1f);
 				}
 				foundLine = true;
 			} else {
