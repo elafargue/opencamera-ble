@@ -289,16 +289,21 @@
                 android:defaultValue="1"
                 />
 
-
-
             <PreferenceScreen
                 android:key="preference_remote_device_name"
                 android:title="Select remote device" >
                 <intent android:action=".Remotecontrol.DeviceScanner"/>
             </PreferenceScreen>
 
+			<SwitchPreference
+				android:key="preference_remote_disconnect_screen_dim"
+				android:title="@string/preference_remote_disconnect_screen_dim"
+				android:summary="@string/preference_remote_disconnect_screen_dim_summary"
+				android:defaultValue="false"
+				/>
 
-        </PreferenceScreen>
+
+		</PreferenceScreen>
 
 		<PreferenceScreen
             android:key="preference_screen_gui"

@@ -850,8 +850,8 @@ public class MainUI {
     }
 
     /**
-     * Highlights the exposure or ISO settings
-     * and un-highlight the other
+     * Highlights the relevant line on the Exposure UI based on
+     * the value of mExposureLine
      *
      */
     private void highlightExposureUILine(Boolean selectNext) {
@@ -867,13 +867,23 @@ public class MainUI {
         // - ISO slider
         // - Shutter speed
         // - exposure seek bar
-        if (mExposureLine == 1 && !iso_seekbar.isShown())
-            mExposureLine += selectNext ? 1 : -1;
-        if (mExposureLine == 2 && !shutter_seekbar.isShown())
-            mExposureLine += selectNext ? 1 : -1;
-        if ((mExposureLine == 3 || mExposureLine == -1 ) && !exposure_seek_bar.isShown())
-            mExposureLine += selectNext ? 1 : -1;
-        mExposureLine = ( mExposureLine  + 4 )% 4;
+        if (selectNext) {
+            if (mExposureLine == 1 && !iso_seekbar.isShown())
+                mExposureLine += 1;
+            if (mExposureLine == 2 && !shutter_seekbar.isShown())
+                mExposureLine += 1;
+            if ((mExposureLine == 3) && !exposure_seek_bar.isShown())
+                mExposureLine += 1;
+        } else {
+            // Select previous
+            if ((mExposureLine == 3 || mExposureLine == -1) && !exposure_seek_bar.isShown())
+                mExposureLine -= 1;
+            if (mExposureLine == 2 && !shutter_seekbar.isShown())
+                mExposureLine -= 1;
+            if (mExposureLine == 1 && !iso_seekbar.isShown())
+                mExposureLine -= 1;
+        }
+        mExposureLine = ( mExposureLine  + 4 ) % 4;
         // Set all lines to black
         iso_buttons_container.setBackgroundColor(Color.TRANSPARENT);
         exposure_seek_bar.setBackgroundColor(Color.TRANSPARENT);
@@ -906,14 +916,45 @@ public class MainUI {
         highlightExposureUILine(false);
     }
 
+    /**
+     * Our order for lines is:
+     *  -0: ISO buttons
+     *  -1: ISO slider
+     *  -2: Shutter speed
+     *  -3: exposure seek bar
+      */
     public void nextExposureUIItem() {
-        if (mExposureLine == 0)
-            nextIsoItem(false);
+        switch (mExposureLine) {
+            case 0:
+                nextIsoItem(false);
+                break;
+            case 1:
+                changeSeekbar(R.id.iso_seekbar, 10);
+                break;
+            case 2:
+                changeSeekbar(R.id.exposure_time_seekbar, 5);
+                break;
+            case 3:
+                changeSeekbar(R.id.exposure_seekbar, 3);
+                break;
+        }
     }
 
     public void previousExposureUIItem() {
-        if (mExposureLine == 0)
-            nextIsoItem(true);
+        switch (mExposureLine) {
+            case 0:
+                nextIsoItem(true);
+                break;
+            case 1:
+                changeSeekbar(R.id.iso_seekbar, -10);
+                break;
+            case 2:
+                changeSeekbar(R.id.exposure_time_seekbar, -5);
+                break;
+            case 3:
+                changeSeekbar(R.id.exposure_seekbar, -3);
+                break;
+        }
     }
 
     private void nextIsoItem(Boolean previous) {
@@ -948,34 +989,29 @@ public class MainUI {
 
 
     /**
-     * Select element on exposure UI.
-     * Right now we only support ISO and exposure compensation, which is the
-     *   case when ISO is 'auto'. When ISO is not auto, then the sliders are
-     *   "ISO" and "Shutter speed".
+     * Select element on exposure UI. Based on the value of mExposureLine
+     *         // Our order for lines is:
+     *         // - ISO buttons
+     *         // - ISO slider
+     *         // - Shutter speed
+     *         // - exposure seek bar
      */
     public void selectExposureUILine() {
         if (!isExposureUIOpen()) { // Safety check
             return;
         }
-        ViewGroup iso_buttons_container = main_activity.findViewById(R.id.iso_buttons);
-        View exposure_seek_bar = main_activity.findViewById(R.id.exposure_container);
-        if (iso_buttons_container == null || exposure_seek_bar == null)
-            return;
-        // Right now we just have 2 settings: ISO and Exposure
-        if (mExposureLine == 0) {
+
+        if (mExposureLine == 0) { // ISO presets
+            ViewGroup iso_buttons_container = main_activity.findViewById(R.id.iso_buttons);
             iso_buttons_container.setBackgroundColor(Color.TRANSPARENT);
             iso_buttons_container.setAlpha(1f);
             final SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(main_activity);
             String current_iso = sharedPreferences.getString(PreferenceKeys.ISOPreferenceKey, CameraController.ISO_DEFAULT);
             // if the manual ISO value isn't one of the "preset" values, then instead highlight the manual ISO icon
-            if( MyDebug.LOG )
-                Log.d(TAG, "current_iso: " + current_iso);
             boolean found = false;
             Button manualButton = null;
             for(View view : iso_buttons) {
                 Button button = (Button)view;
-                if( MyDebug.LOG )
-                    Log.d(TAG, "button: " + button.getText());
                 String button_text = "" + button.getText();
                 if( button_text.contains(current_iso) ) {
                     PopupView.setButtonSelected(button, true);
@@ -999,6 +1035,20 @@ public class MainUI {
             }
             mSelectingExposureUIElement = true;
         } else if (mExposureLine == 1) {
+            // ISO seek bar - change color
+            View seek_bar = main_activity.findViewById(R.id.iso_seekbar);
+            seek_bar.setAlpha(0.1f);
+            mSelectingExposureUIElement = true;
+        } else if (mExposureLine == 2) {
+            // ISO seek bar - change color
+            View seek_bar = main_activity.findViewById(R.id.exposure_time_seekbar);
+            seek_bar.setAlpha(0.1f);
+            mSelectingExposureUIElement = true;
+        } else if (mExposureLine == 3) {
+            View container = main_activity.findViewById(R.id.exposure_container);
+            container.setAlpha(0.1f);
+            mSelectingExposureUIElement = true;
+            // Exposure compensation
 
         }
     }

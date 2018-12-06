@@ -1072,10 +1072,14 @@ public class MainActivity extends Activity {
                 Log.d(TAG, "Remote connected");
                 // Tell the Bluetooth service what type of remote we want to use
                 mBluetoothLeService.setRemoteDeviceType(mRemoteDeviceType);
+                MainActivity.this.setBrightnessForCamera(false);
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 Log.d(TAG, "Remote disconnected");
                 mRemoteConnected = false;
                 mainUI.updateRemoteConnectionIcon();
+                MainActivity.this.setBrightnessToMinimumIfWanted();
+                if (mainUI.isExposureUIOpen())
+                    mainUI.toggleExposureUI();
             } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
                 Log.d(TAG, "Remote services discovered");
                 /*
@@ -2140,6 +2144,29 @@ public class MainActivity extends Activity {
 				getWindow().setAttributes(layout);
 			}
 		});
+    }
+
+    /**
+     * Set the brightness to minimal in case the preference key is set to do it
+     */
+    void setBrightnessToMinimumIfWanted() {
+        if( MyDebug.LOG )
+            Log.d(TAG, "setBrightnessToMinimum");
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        final WindowManager.LayoutParams layout = getWindow().getAttributes();
+        if( sharedPreferences.getBoolean(PreferenceKeys.DimWhenDisconnectedPreferenceKey, false) ) {
+            layout.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_OFF;
+        }
+        else {
+            layout.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+        }
+
+        this.runOnUiThread(new Runnable() {
+            public void run() {
+                getWindow().setAttributes(layout);
+            }
+        });
+
     }
 
     /** Sets the window flags for normal operation (when camera preview is visible).

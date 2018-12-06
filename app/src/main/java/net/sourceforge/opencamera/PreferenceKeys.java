@@ -165,6 +165,8 @@ public class PreferenceKeys {
 
 	public static final String TakePhotoBorderPreferenceKey = "preference_take_photo_border";
 
+	public static final String DimWhenDisconnectedPreferenceKey = "preference_remote_disconnect_screen_dim";
+
     public static String getShowWhenLockedPreferenceKey() {
     	return "preference_show_when_locked";
     }

@@ -719,5 +719,7 @@
     <string name="menu_scan">Scan</string>
     <string name="menu_stop">Stop</string>
     <string name="unknown_device">Unknown device</string>
+    <string name="preference_remote_disconnect_screen_dim">Dim screen if remote disconnects</string>
+    <string name="preference_remote_disconnect_screen_dim_summary">Hint: set default brightness to minimum level before starting Open Camera.</string>
 
 </resources>
