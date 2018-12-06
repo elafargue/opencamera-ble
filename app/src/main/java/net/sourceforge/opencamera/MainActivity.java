@@ -1605,6 +1605,11 @@ public class MainActivity extends Activity {
                 case PreferenceKeys.EnableRemote:
                     startRemoteControl();;
                     break;
+                case PreferenceKeys.RemoteName:
+                    // The remote address changed, restart the service
+                    if (remoteEnabled())
+                        stopRemoteControl();
+                    startRemoteControl();
 				default:
 					if( MyDebug.LOG )
 						Log.d(TAG, "this change does require update");

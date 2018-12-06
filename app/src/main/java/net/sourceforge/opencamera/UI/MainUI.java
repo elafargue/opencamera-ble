@@ -858,7 +858,7 @@ public class MainUI {
         if (!isExposureUIOpen()) { // Safety check
             return;
         }
-        ViewGroup iso_buttons_container = main_activity.findViewById(R.id.iso_buttons); // Always shown
+        ViewGroup iso_buttons_container = main_activity.findViewById(R.id.iso_buttons); // Shown when Camera API2 enabled
         View exposure_seek_bar = main_activity.findViewById(R.id.exposure_container);
         View shutter_seekbar = main_activity.findViewById(R.id.exposure_time_seekbar);
         View iso_seekbar = main_activity.findViewById(R.id.iso_seekbar);
@@ -868,20 +868,22 @@ public class MainUI {
         // - Shutter speed
         // - exposure seek bar
         if (selectNext) {
+            if (mExposureLine == 0 && !iso_buttons_container.isShown())
+                mExposureLine++;
             if (mExposureLine == 1 && !iso_seekbar.isShown())
-                mExposureLine += 1;
+                mExposureLine++;
             if (mExposureLine == 2 && !shutter_seekbar.isShown())
-                mExposureLine += 1;
+                mExposureLine++;
             if ((mExposureLine == 3) && !exposure_seek_bar.isShown())
-                mExposureLine += 1;
+                mExposureLine++;
         } else {
             // Select previous
             if ((mExposureLine == 3 || mExposureLine == -1) && !exposure_seek_bar.isShown())
-                mExposureLine -= 1;
+                mExposureLine--;
             if (mExposureLine == 2 && !shutter_seekbar.isShown())
-                mExposureLine -= 1;
+                mExposureLine--;
             if (mExposureLine == 1 && !iso_seekbar.isShown())
-                mExposureLine -= 1;
+                mExposureLine--;
         }
         mExposureLine = ( mExposureLine  + 4 ) % 4;
         // Set all lines to black
