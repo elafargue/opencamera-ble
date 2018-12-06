@@ -1072,12 +1072,12 @@ public class MainActivity extends Activity {
                 Log.d(TAG, "Remote connected");
                 // Tell the Bluetooth service what type of remote we want to use
                 mBluetoothLeService.setRemoteDeviceType(mRemoteDeviceType);
-                MainActivity.this.setBrightnessForCamera(false);
+                setBrightnessForCamera(false);
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 Log.d(TAG, "Remote disconnected");
                 mRemoteConnected = false;
                 mainUI.updateRemoteConnectionIcon();
-                MainActivity.this.setBrightnessToMinimumIfWanted();
+                setBrightnessToMinimumIfWanted();
                 if (mainUI.isExposureUIOpen())
                     mainUI.toggleExposureUI();
             } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
@@ -1137,34 +1137,25 @@ public class MainActivity extends Activity {
                         }
                         break;
 					case BluetoothLeService.COMMAND_UP:
-					    if (mainUI.popupIsOpen()) {
-                            if (mainUI.selectingIcons()) {
-                                mainUI.nextPopupIcon();
-                            } else if (mainUI.selectingLines()) {
-                                mainUI.previousPopupLine();
-                            }
-                        } else if (mainUI.isExposureUIOpen()) {
-					        if (mainUI.isSelectingExposureUIElement()) {
-					            mainUI.nextExposureUIItem();
-                            } else {
-                                mainUI.previousExposureUILine();
-                            }
-                        } else {
+					    if (!mainUI.processRemoteUpButton()) {
 					        // Default up behaviour:
                             // - if we are on manual focus, then adjust focus.
                             // - if we are on autofocus, then adjust zoom.
+                            if (getPreview().getCurrentFocusValue() != null && getPreview().getCurrentFocusValue().equals("focus_mode_manual2")) {
+                                changeFocusDistance(-25, false);
+                            } else {
+                                // Adjust zoom
+                                zoomIn();
+                            }
                         }
 						break;
                     case BluetoothLeService.COMMAND_DOWN:
-                        if (mainUI.selectingIcons()) {
-                            mainUI.previousPopupIcon();
-                        } else if (mainUI.selectingLines()){
-                            mainUI.nextPopupLine();
-                        } else if (mainUI.isExposureUIOpen()) {
-                            if (mainUI.isSelectingExposureUIElement()) {
-                                mainUI.previousExposureUIItem();
+                        if (!mainUI.processRemoteDownButton()) {
+                            if (getPreview().getCurrentFocusValue() != null && getPreview().getCurrentFocusValue().equals("focus_mode_manual2")) {
+                                changeFocusDistance(25, false);
                             } else {
-                                mainUI.nextExposureUILine();
+                                // Adjust zoom
+                                zoomOut();
                             }
                         }
                         break;

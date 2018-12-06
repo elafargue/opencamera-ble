@@ -1058,6 +1058,54 @@ public class MainUI {
     }
 
 
+    /**
+     * Process a press to the "Up" button on a remote. Called from MainActivity.
+     * @return true if an action was taken
+     */
+    public Boolean processRemoteUpButton() {
+        Boolean didProcess = false;
+        if (popupIsOpen()) {
+            didProcess = true;
+            if (selectingIcons()) {
+                nextPopupIcon();
+            } else if (selectingLines()) {
+                previousPopupLine();
+            }
+        } else if (isExposureUIOpen()) {
+            didProcess = true;
+            if (isSelectingExposureUIElement()) {
+                nextExposureUIItem();
+            } else {
+                previousExposureUILine();
+            }
+        }
+        return didProcess;
+    }
+
+    /**
+     * Process a press to the "Down" button on a remote. Called from MainActivity.
+     * @return true if an action was taken
+     */
+    public Boolean processRemoteDownButton() {
+        Boolean didProcess = false;
+        if (popupIsOpen()) {
+            if (selectingIcons()) {
+                previousPopupIcon();
+            } else if (selectingLines()) {
+                nextPopupLine();
+            }
+            didProcess = true;
+        } else if (isExposureUIOpen()) {
+            if (isSelectingExposureUIElement()) {
+                previousExposureUIItem();
+            } else {
+                nextExposureUILine();
+            }
+            didProcess = true;
+        }
+        return didProcess;
+    }
+
     private List<View> iso_buttons;
 	private int iso_button_manual_index = -1;
 	private final static String manual_iso_value = "m";
@@ -1458,6 +1506,7 @@ public class MainUI {
 			if (v instanceof ImageButton || v instanceof Button ) {
 				if (highlight) {
 					v.setBackgroundColor(Color.RED);
+					v.setAlpha(0.5f);
 					mHighlightedIcon = v;
 					mSelectingIcons = true;
 				} else {
