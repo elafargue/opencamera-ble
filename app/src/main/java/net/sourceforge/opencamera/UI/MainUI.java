@@ -13,6 +13,7 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.media.AudioManager;
 import android.os.Build;
 import android.preference.PreferenceManager;
@@ -862,6 +863,7 @@ public class MainUI {
         View exposure_seek_bar = main_activity.findViewById(R.id.exposure_container);
         View shutter_seekbar = main_activity.findViewById(R.id.exposure_time_seekbar);
         View iso_seekbar = main_activity.findViewById(R.id.iso_seekbar);
+        View sliders_container = main_activity.findViewById(R.id.sliders_container);
         // Our order for lines is:
         // - ISO buttons
         // - ISO slider
@@ -1069,7 +1071,7 @@ public class MainUI {
         if (popupIsOpen()) {
             didProcess = true;
             if (selectingIcons()) {
-                nextPopupIcon();
+                previousPopupIcon();
             } else if (selectingLines()) {
                 previousPopupLine();
             }
@@ -1092,7 +1094,7 @@ public class MainUI {
         Boolean didProcess = false;
         if (popupIsOpen()) {
             if (selectingIcons()) {
-                previousPopupIcon();
+                nextPopupIcon();
             } else if (selectingLines()) {
                 nextPopupLine();
             }
@@ -1460,7 +1462,8 @@ public class MainUI {
 			return;
 		}
 		final ViewGroup popup_container = main_activity.findViewById(R.id.popup_container);
-		final LinearLayout inside = (LinearLayout) popup_container.getChildAt(0);
+        Rect scrollBounds = new Rect();
+        popup_container.getDrawingRect(scrollBounds);		final LinearLayout inside = (LinearLayout) popup_container.getChildAt(0);
 		if (inside == null)
 			return; // Safety check
 		int count = inside.getChildCount();
@@ -1469,10 +1472,12 @@ public class MainUI {
 			// Ensure we stay within our bounds:
 			mPopupLine = (mPopupLine + count ) % count;
 			View v = inside.getChildAt(mPopupLine);
-			if (v instanceof LinearLayout ) {
+			if (v.isShown() && v instanceof LinearLayout ) {
 				if (highlight) {
 					v.setBackgroundColor(Color.RED);
 					v.setAlpha(0.3f);
+					if (v.getBottom() > scrollBounds.bottom || v.getTop() < scrollBounds.top)
+                        popup_container.scrollTo(0, v.getTop());
 					mHighlightedLine = (LinearLayout) v;
 				} else {
 					v.setBackgroundColor(Color.TRANSPARENT);
@@ -1483,6 +1488,7 @@ public class MainUI {
 				mPopupLine += goUp ? -1 : 1;
 			}
 		}
+		Log.d(TAG,"Current line: " + mPopupLine);
 	}
 
     /**
