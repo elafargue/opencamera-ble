@@ -864,6 +864,7 @@ public class MainUI {
         View shutter_seekbar = main_activity.findViewById(R.id.exposure_time_seekbar);
         View iso_seekbar = main_activity.findViewById(R.id.iso_seekbar);
         View sliders_container = main_activity.findViewById(R.id.sliders_container);
+        View wb_seekbar = main_activity.findViewById(R.id.white_balance_seekbar);
         // Our order for lines is:
         // - ISO buttons
         // - ISO slider
@@ -878,21 +879,26 @@ public class MainUI {
                 mExposureLine++;
             if ((mExposureLine == 3) && !exposure_seek_bar.isShown())
                 mExposureLine++;
+            if ((mExposureLine == 4) && !wb_seekbar.isShown())
+            	mExposureLine++;
         } else {
             // Select previous
-            if ((mExposureLine == 3 || mExposureLine == -1) && !exposure_seek_bar.isShown())
+			if ((mExposureLine == 4 || mExposureLine == 1) && !wb_seekbar.isShown())
+				mExposureLine--;
+            if (mExposureLine == 3 && !exposure_seek_bar.isShown())
                 mExposureLine--;
             if (mExposureLine == 2 && !shutter_seekbar.isShown())
                 mExposureLine--;
             if (mExposureLine == 1 && !iso_seekbar.isShown())
                 mExposureLine--;
         }
-        mExposureLine = ( mExposureLine  + 4 ) % 4;
+        mExposureLine = ( mExposureLine  + 5 ) % 5;
         // Set all lines to black
         iso_buttons_container.setBackgroundColor(Color.TRANSPARENT);
         exposure_seek_bar.setBackgroundColor(Color.TRANSPARENT);
         shutter_seekbar.setBackgroundColor(Color.TRANSPARENT);
         iso_seekbar.setBackgroundColor(Color.TRANSPARENT);
+        wb_seekbar.setBackgroundColor(Color.TRANSPARENT);
 
         if (mExposureLine == 0) {
             iso_buttons_container.setBackgroundColor(Color.RED);
@@ -905,9 +911,12 @@ public class MainUI {
             shutter_seekbar.setBackgroundColor(Color.RED);
             shutter_seekbar.setAlpha(0.5f);
         } else if (mExposureLine == 3) { //
-                exposure_seek_bar.setBackgroundColor(Color.RED);
-                exposure_seek_bar.setAlpha(0.5f);
-        }
+			exposure_seek_bar.setBackgroundColor(Color.RED);
+			exposure_seek_bar.setAlpha(0.5f);
+        } else if (mExposureLine == 4) {
+        	wb_seekbar.setBackgroundColor(Color.RED);
+        	wb_seekbar.setAlpha(0.5f);
+		}
     }
 
     public void nextExposureUILine() {
@@ -939,8 +948,11 @@ public class MainUI {
                 changeSeekbar(R.id.exposure_time_seekbar, 5);
                 break;
             case 3:
-                changeSeekbar(R.id.exposure_seekbar, 3);
+                changeSeekbar(R.id.exposure_seekbar, 1);
                 break;
+			case 4:
+				changeSeekbar(R.id.white_balance_seekbar, 3);
+				break;
         }
     }
 
@@ -956,8 +968,11 @@ public class MainUI {
                 changeSeekbar(R.id.exposure_time_seekbar, -5);
                 break;
             case 3:
-                changeSeekbar(R.id.exposure_seekbar, -3);
+                changeSeekbar(R.id.exposure_seekbar, -1);
                 break;
+			case 4:
+				changeSeekbar(R.id.white_balance_seekbar, -3);
+				break;
         }
     }
 
@@ -1049,12 +1064,16 @@ public class MainUI {
             seek_bar.setAlpha(0.1f);
             mSelectingExposureUIElement = true;
         } else if (mExposureLine == 3) {
+			// Exposure compensation
             View container = main_activity.findViewById(R.id.exposure_container);
             container.setAlpha(0.1f);
             mSelectingExposureUIElement = true;
-            // Exposure compensation
-
-        }
+        } else if (mExposureLine == 4) {
+        	// Manual white balance
+			View container = main_activity.findViewById(R.id.white_balance_seekbar);
+			container.setAlpha(0.1f);
+			mSelectingExposureUIElement = true;
+		}
     }
 
     public Boolean isSelectingExposureUIElement() {
