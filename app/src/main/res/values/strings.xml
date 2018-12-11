@@ -721,5 +721,7 @@
     <string name="unknown_device">Unknown device</string>
     <string name="preference_remote_disconnect_screen_dim">Dim screen if remote disconnects</string>
     <string name="preference_remote_disconnect_screen_dim_summary">Hint: set default brightness to minimum level before starting Open Camera.</string>
+    <string name="preference_water_type">Use Saltwater for depth calculations</string>
+    <string name="preference_water_type_summary">For underwater housings, improves accuracy if correct water type is selected.</string>
 
 </resources>

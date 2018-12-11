@@ -150,6 +150,10 @@ public class MainActivity extends Activity {
 	public volatile float test_angle;
 	public volatile String test_last_saved_image;
 
+	private static final float WATER_DENSITY_FRESHWATER = 1.0f;
+	private static final float WATER_DENSITY_SALTWATER = 1.03f;
+	private float mWaterDensity = 1.0f;
+
     // Code to manage Service lifecycle for remote control.
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
@@ -1063,6 +1067,8 @@ public class MainActivity extends Activity {
     /**
      * Receives event from the remote command handler through intents
      * Handles various events fired by the Service.
+	 *
+	 * TODO: factor this out of MainActivity and into the Remotecontrol namespace
      */
     private final BroadcastReceiver remoteControlCommandReceiver = new BroadcastReceiver() {
         @Override
@@ -1076,6 +1082,7 @@ public class MainActivity extends Activity {
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 Log.d(TAG, "Remote disconnected");
                 mRemoteConnected = false;
+				preview.onExtraOSDValuesChanged("-- °C", "-- m");
                 mainUI.updateRemoteConnectionIcon();
                 setBrightnessToMinimumIfWanted();
                 if (mainUI.isExposureUIOpen())
@@ -1089,9 +1096,15 @@ public class MainActivity extends Activity {
                 */
                 mRemoteConnected = true;
                 mainUI.updateRemoteConnectionIcon();
-            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                Log.d(TAG, "Data incoming: " + intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
-                // displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+            } else if (BluetoothLeService.ACTION_SENSOR_VALUE.equals(action)) {
+            	double temp = intent.getDoubleExtra(BluetoothLeService.SENSOR_TEMPERATURE, -1);
+            	double depth = intent.getDoubleExtra(BluetoothLeService.SENSOR_DEPTH, -1) / mWaterDensity;
+            	depth = (Math.round(depth* 10)) / 10.0; // Round to 1 decimal
+                Log.d(TAG, "Sensor values: depth: " + depth + " - temp: " + temp);
+                // Create two OSD lines
+				String line1 = "" + temp + " °C";
+				String line2 = "" + depth + " m";
+				preview.onExtraOSDValuesChanged(line1, line2);
             } else if (BluetoothLeService.ACTION_REMOTE_COMMAND.equals(action)) {
                 int command = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, -1);
                 // TODO: we could abstract this into a method provided by each remote control model
@@ -1188,6 +1201,7 @@ public class MainActivity extends Activity {
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(BluetoothLeService.ACTION_REMOTE_COMMAND);
+        intentFilter.addAction(BluetoothLeService.ACTION_SENSOR_VALUE);
         return intentFilter;
     }
 
@@ -1610,6 +1624,11 @@ public class MainActivity extends Activity {
                     if (remoteEnabled())
                         stopRemoteControl();
                     startRemoteControl();
+                    break;
+				case PreferenceKeys.WaterType:
+					Boolean wt = sharedPreferences.getBoolean(PreferenceKeys.WaterType, true);
+					mWaterDensity = wt ? WATER_DENSITY_SALTWATER : WATER_DENSITY_FRESHWATER;
+					break;
 				default:
 					if( MyDebug.LOG )
 						Log.d(TAG, "this change does require update");

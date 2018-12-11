@@ -837,7 +837,11 @@ public class DrawPreview {
 		}
 	}
 
-	private void onDrawInfoLines(Canvas canvas, final int top_y, long time_ms) {
+	/**
+	 * Draw the time of the day, and optionally extra OSD info if necessary
+	 */
+	private void onDrawInfoLines(Canvas canvas, final int top_y, int bottom_y, long time_ms,
+								 String line1, String line2) {
 		Preview preview = main_activity.getPreview();
 		CameraController camera_controller = preview.getCameraController();
 		int ui_rotation = preview.getUIRotation();
@@ -932,6 +936,21 @@ public class DrawPreview {
 				}
 			}
 		}
+
+		// Now draw additional info on the lower left corner if needed
+		int y_offset = (int) (27 * scale + 0.5f);
+		p.setTextSize(24 * scale + 0.5f); // convert dps to pixels
+		if (line1 != null && line1.length() > 0) {
+			applicationInterface.drawTextWithBackground(canvas, p, line1,
+						Color.WHITE, Color.BLACK,  location_x, bottom_y - y_offset,
+						MyApplicationInterface.Alignment.ALIGNMENT_BOTTOM, null, true);
+		}
+		if (line2 != null && line2.length() > 0) {
+			applicationInterface.drawTextWithBackground(canvas, p, line2,
+					Color.WHITE, Color.BLACK, location_x, bottom_y,
+					MyApplicationInterface.Alignment.ALIGNMENT_BOTTOM, null, true);
+		}
+		p.setTextSize(16 * scale + 0.5f); // Restore text size
 
 		if( camera_controller != null && show_iso_pref ) {
 			if( iso_exposure_string == null || time_ms > last_iso_exposure_time + 500 ) {
@@ -1255,6 +1274,9 @@ public class DrawPreview {
 		double level_angle = preview.getLevelAngle();
 		boolean has_geo_direction = preview.hasGeoDirection();
 		double geo_direction = preview.getGeoDirection();
+		String osd_line1 = preview.getOSDLine1();
+		String osd_line2 = preview.getOSDLine2();
+		int text_base_y = 0;
 
 		canvas.save();
 		canvas.rotate(ui_rotation, canvas.getWidth()/2.0f, canvas.getHeight()/2.0f);
@@ -1264,7 +1286,6 @@ public class DrawPreview {
 					canvas.getHeight() / 2, p);*/
 			int text_y = (int) (20 * scale + 0.5f); // convert dps to pixels
 			// fine tuning to adjust placement of text with respect to the GUI, depending on orientation
-			int text_base_y = 0;
 			if( ui_rotation == ( ui_placement_right ? 0 : 180 ) ) {
 				text_base_y = canvas.getHeight() - (int)(0.5*text_y);
 			}
@@ -1379,6 +1400,7 @@ public class DrawPreview {
 				String string = "" + Math.round(geo_angle) + (char)0x00B0;
 				applicationInterface.drawTextWithBackground(canvas, p, string, color, Color.BLACK, canvas.getWidth() / 2 + pixels_offset_x, text_base_y, MyApplicationInterface.Alignment.ALIGNMENT_BOTTOM, ybounds_text, true);
 			}
+
 			if( preview.isOnTimer() ) {
 				long remaining_time = (preview.getTimerEndTime() - time_ms + 999)/1000;
 				if( MyDebug.LOG )
@@ -1581,7 +1603,7 @@ public class DrawPreview {
 			}
 		}
 
-		onDrawInfoLines(canvas, top_y, time_ms);
+		onDrawInfoLines(canvas, top_y, text_base_y, time_ms, osd_line1, osd_line2);
 
 		canvas.restore();
 	}

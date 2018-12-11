@@ -61,6 +61,9 @@ public class BluetoothLeService extends Service {
     private HashMap<String, BluetoothGattCharacteristic> subscribedCharacteristics = new HashMap<>();
     private List<BluetoothGattCharacteristic> charsToSubscribeTo = new ArrayList<>();
 
+    private double currentTemp = -1;
+    private double currentDepth = -1;
+
     private static final int STATE_DISCONNECTED = 0;
     private static final int STATE_CONNECTING = 1;
     private static final int STATE_CONNECTED = 2;
@@ -75,14 +78,20 @@ public class BluetoothLeService extends Service {
             "net.sourceforge.opencamera.Remotecontrol.ACTION_DATA_AVAILABLE";
     public final static String ACTION_REMOTE_COMMAND =
             "net.sourceforge.opencamera.Remotecontrol.COMMAND";
+    public final static String ACTION_SENSOR_VALUE =
+            "net.sourceforge.opencamera.Remotecontrol.SENSOR";
+    public final static String SENSOR_TEMPERATURE =
+            "net.sourceforge.opencamera.Remotecontrol.TEMPERATURE";
+    public final static String SENSOR_DEPTH =
+            "net.sourceforge.opencamera.Remotecontrol.DEPTH";
     public final static String EXTRA_DATA =
             "net.sourceforge.opencamera.Remotecontrol.EXTRA_DATA";
-    public final static int COMMAND_SHUTTER = 0;
-    public final static int COMMAND_MODE = 1;
-    public final static int COMMAND_MENU = 2;
-    public final static int COMMAND_AFMF = 3;
-    public final static int COMMAND_UP = 4;
-    public final static int COMMAND_DOWN = 5;
+    public final static int COMMAND_SHUTTER = 32;
+    public final static int COMMAND_MODE = 16;
+    public final static int COMMAND_MENU = 48;
+    public final static int COMMAND_AFMF = 97;
+    public final static int COMMAND_UP = 64;
+    public final static int COMMAND_DOWN = 80;
 
 
 
@@ -105,6 +114,8 @@ public class BluetoothLeService extends Service {
                 // Attempts to discover services after successful connection.
                 Log.i(TAG, "Attempting to start service discovery");
                 mBluetoothGatt.discoverServices();
+                currentDepth = -1;
+                currentTemp = -1;
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = ACTION_GATT_DISCONNECTED;
@@ -211,6 +222,7 @@ public class BluetoothLeService extends Service {
                                  final BluetoothGattCharacteristic characteristic) {
         UUID uuid = characteristic.getUuid();
         final int format_uint8 = BluetoothGattCharacteristic.FORMAT_UINT8;
+        final int format_uint16 = BluetoothGattCharacteristic.FORMAT_UINT16;
         int remoteCommand = -1;
 
         if (KrakenGattAttributes.KRAKEN_BUTTONS_CHARACTERISTIC.equals(uuid)) {
@@ -221,21 +233,19 @@ public class BluetoothLeService extends Service {
             // on the various button actions in MainActivity, because those will change depending
             // on the current state of the app, and we don't want to know anything about that state
             // from the Bluetooth LE service
+            // TODO: update to remove all those tests and just forward buttonCode since value is identical
+            //       but this is more readable if we want to implement other drivers
             if (buttonCode == 32) {
                 // Shutter press
-                action = ACTION_REMOTE_COMMAND;
                 remoteCommand = COMMAND_SHUTTER;
             } else if (buttonCode == 16) {
                 // "Mode" button: either "back" action or "Photo/Camera" switch
-                action = ACTION_REMOTE_COMMAND;
                 remoteCommand = COMMAND_MODE;
             } else if (buttonCode == 48) {
                 // "Menu" button
-                action = ACTION_REMOTE_COMMAND;
                 remoteCommand = COMMAND_MENU;
             } else if (buttonCode == 97) {
                 // AF/MF button
-                action = ACTION_REMOTE_COMMAND;
                 remoteCommand = COMMAND_AFMF;
             } else if (buttonCode == 96) {
                 // Long press on MF/AF button.
@@ -243,28 +253,41 @@ public class BluetoothLeService extends Service {
                 // 96 after one second of continuous press
             } else if (buttonCode == 64) {
                 // Up button
-                action = ACTION_REMOTE_COMMAND;
                 remoteCommand = COMMAND_UP;
             } else if (buttonCode == 80) {
                 // Down button
-                action = ACTION_REMOTE_COMMAND;
                 remoteCommand = COMMAND_DOWN;
             }
-            /*
-            TODO: Manage the key presses on the housing to control
-            the rest of the functions.
-            */
+            // Only send forward if we have something to say
+            if (remoteCommand > -1) {
+                final Intent intent = new Intent(ACTION_REMOTE_COMMAND);
+                intent.putExtra(EXTRA_DATA, remoteCommand);
+                sendBroadcast(intent);
+            }
         } else if (KrakenGattAttributes.KRAKEN_SENSORS_CHARACTERISTIC.equals(uuid)) {
-            float temperature = characteristic.getIntValue(format_uint8, 2) / 10;
-            if (MyDebug.LOG)
-                Log.d(TAG, "Got Kraken sensor reading. Temperature: " + temperature);
-            return;
-        }
+            // The housing returns four bytes.
+            // Byte 0-1: depth = (Byte 0 + Byte 1 << 8) / 10 / density
+            // Byte 2-3: temperature = (Byte 2 + Byte 3 << 8) / 10
+            //
+            // Depth is valid for fresh water by default ( makes you wonder whether the sensor
+            // is really designed for saltwater at all), and the value has to be divided by the density
+            // of saltwater. A commonly accepted value is 1030 kg/m3 (1.03 density)
 
-        // Only send forward if we have something to say
-        if (remoteCommand >= 0) {
-            final Intent intent = new Intent(action);
-            intent.putExtra(EXTRA_DATA, remoteCommand);
+            double temperature = characteristic.getIntValue(format_uint16, 2) / 10;
+            double depth = characteristic.getIntValue(format_uint16, 0) / 10;
+
+            if (temperature == currentTemp && depth == currentDepth)
+                return;
+
+            currentDepth = depth;
+            currentTemp = temperature;
+
+            if (MyDebug.LOG)
+                Log.d(TAG, "Got new Kraken sensor reading. Temperature: " + temperature + " Depth:" + depth);
+
+            final Intent intent = new Intent(ACTION_SENSOR_VALUE);
+            intent.putExtra(SENSOR_TEMPERATURE, temperature);
+            intent.putExtra(SENSOR_DEPTH, depth);
             sendBroadcast(intent);
         }
 

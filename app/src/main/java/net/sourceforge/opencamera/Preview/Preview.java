@@ -292,6 +292,10 @@ public class Preview implements SurfaceHolder.Callback, TextureView.SurfaceTextu
 	private final float [] geo_direction = new float[3];
 	private final float [] new_geo_direction = new float[3];
 
+	// OSD extra lines
+	private String OSDLine1;
+	private String OSDLine2;
+
 	private final DecimalFormat decimal_format_1dp = new DecimalFormat("#.#");
 	private final DecimalFormat decimal_format_2dp = new DecimalFormat("#.##");
 
@@ -6004,6 +6008,29 @@ public class Preview implements SurfaceHolder.Callback, TextureView.SurfaceTextu
 			applicationInterface.cameraInOperation(false, false); // needed for when taking photo with pause preview option
 		}
     }
+
+	/**
+	 * A generic method to display up to two lines on the preview.
+	 * Currently used by the Kraken underwater housing sensor to display
+	 * temperature and depth.
+	 *
+	 * The two lines are displayed in the lower left corner of the screen.
+	 *
+	 * @param line1 First line to display
+	 * @param line2 Second line to display
+	 */
+	public void onExtraOSDValuesChanged(String line1, String line2) {
+		OSDLine1 = line1;
+		OSDLine2 = line2;
+	}
+
+	public String getOSDLine1() {
+		return OSDLine1;
+	}
+
+	public String getOSDLine2() {
+		return OSDLine2;
+	}
 
     public void onAccelerometerSensorChanged(SensorEvent event) {
 		/*if( MyDebug.LOG )
