@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Open Camera</string>
+    <string name="app_name">Kraken Housing Camera</string>
     <string name="action_settings">Ustawienia</string>
     <string name="action_popup">Ustawienia</string>
     <string name="intro_text">Dotknij aby ustawić ostrość a następnie wciśnij niebieski przycisk by zrobić zdjęcie. Jeśli potrzebujesz pomocy kliknij Pomoc online w ustawieniach. Open Camera jest zupełnie za darmo. Jeśli spodobała Ci się ta aplikacja rozważ zakup aplikacji-darowizny :) (sprawdź link w ustawieniach).\n\nPolityka prywatności: Dostęp do lokalizacji jest wymagany do geotagowania ale jest domyślnie wyłączony. Jeśli jest włączony Twoja lokalizacja będzie dodawana do zapisywanych plików i będzie używana wyłącznie w tym celu.</string>
