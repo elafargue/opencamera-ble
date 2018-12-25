@@ -13,6 +13,7 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.media.AudioManager;
 import android.os.Build;
@@ -902,20 +903,20 @@ public class MainUI {
 
         if (mExposureLine == 0) {
             iso_buttons_container.setBackgroundColor(Color.RED);
-            iso_buttons_container.setAlpha(0.5f);
+            //iso_buttons_container.setAlpha(0.5f);
             return;
         } else if (mExposureLine == 1) {
            iso_seekbar.setBackgroundColor(Color.RED);
-           iso_seekbar.setAlpha(0.5f);
+           //iso_seekbar.setAlpha(0.5f);
         } else if (mExposureLine == 2) {
             shutter_seekbar.setBackgroundColor(Color.RED);
-            shutter_seekbar.setAlpha(0.5f);
+            //shutter_seekbar.setAlpha(0.5f);
         } else if (mExposureLine == 3) { //
 			exposure_seek_bar.setBackgroundColor(Color.RED);
-			exposure_seek_bar.setAlpha(0.5f);
+			//exposure_seek_bar.setAlpha(0.5f);
         } else if (mExposureLine == 4) {
         	wb_seekbar.setBackgroundColor(Color.RED);
-        	wb_seekbar.setAlpha(0.5f);
+        	//wb_seekbar.setAlpha(0.5f);
 		}
     }
 
@@ -1035,7 +1036,7 @@ public class MainUI {
                 if( button_text.contains(current_iso) ) {
                     PopupView.setButtonSelected(button, true);
                     button.setBackgroundColor(Color.RED);
-                    button.setAlpha(0.3f);
+                    //button.setAlpha(0.3f);
                     found = true;
                 }
                 else {
@@ -1050,28 +1051,28 @@ public class MainUI {
                 // We are in manual ISO, highlight the "M" button
                 PopupView.setButtonSelected(manualButton, true);
                 manualButton.setBackgroundColor(Color.RED);
-                manualButton.setAlpha(0.3f);
+                //manualButton.setAlpha(0.3f);
             }
             mSelectingExposureUIElement = true;
         } else if (mExposureLine == 1) {
             // ISO seek bar - change color
             View seek_bar = main_activity.findViewById(R.id.iso_seekbar);
-            seek_bar.setAlpha(0.1f);
+            //seek_bar.setAlpha(0.1f);
             mSelectingExposureUIElement = true;
         } else if (mExposureLine == 2) {
             // ISO seek bar - change color
             View seek_bar = main_activity.findViewById(R.id.exposure_time_seekbar);
-            seek_bar.setAlpha(0.1f);
+            //seek_bar.setAlpha(0.1f);
             mSelectingExposureUIElement = true;
         } else if (mExposureLine == 3) {
 			// Exposure compensation
             View container = main_activity.findViewById(R.id.exposure_container);
-            container.setAlpha(0.1f);
+            //container.setAlpha(0.1f);
             mSelectingExposureUIElement = true;
         } else if (mExposureLine == 4) {
         	// Manual white balance
 			View container = main_activity.findViewById(R.id.white_balance_seekbar);
-			container.setAlpha(0.1f);
+			//container.setAlpha(0.1f);
 			mSelectingExposureUIElement = true;
 		}
     }
@@ -1494,7 +1495,7 @@ public class MainUI {
 			if (v.isShown() && v instanceof LinearLayout ) {
 				if (highlight) {
 					v.setBackgroundColor(Color.RED);
-					v.setAlpha(0.3f);
+					//v.setAlpha(0.3f);
 					if (v.getBottom() > scrollBounds.bottom || v.getTop() < scrollBounds.top)
                         popup_container.scrollTo(0, v.getTop());
 					mHighlightedLine = (LinearLayout) v;
@@ -1533,7 +1534,7 @@ public class MainUI {
 			if (v instanceof ImageButton || v instanceof Button ) {
 				if (highlight) {
 					v.setBackgroundColor(Color.RED);
-					v.setAlpha(0.5f);
+					//v.setAlpha(0.5f);
 					mHighlightedIcon = v;
 					mSelectingIcons = true;
 				} else {
