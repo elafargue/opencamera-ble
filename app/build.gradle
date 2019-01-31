@@ -5,16 +5,17 @@ android {
     compileOptions.encoding = 'UTF-8'
 
     defaultConfig {
-        applicationId "net.sourceforge.opencamera"
-        minSdkVersion 15
+        applicationId "io.wizkers.opencamera"
+        minSdkVersion 18
         targetSdkVersion 27
 
         renderscriptTargetApi 20
         //renderscriptSupportModeEnabled true // don't use support library as it bloats the APK, and we don't need pre-4.4 support
         //need build tools higher than 20 at least to support ScriptIntrinsicHistogram
 
-        testApplicationId "net.sourceforge.opencamera.test"
+        testApplicationId "io.wizkers.opencamera.test"
         testInstrumentationRunner "android.test.InstrumentationTestRunner"
+        vectorDrawables.useSupportLibrary = true
     }
 
     buildTypes {
@@ -31,5 +32,8 @@ android {
 
 dependencies {
     implementation 'com.android.support:support-v4:27.1.1'
+    implementation 'com.android.support:support-vector-drawable:27.1.1'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
     testImplementation 'junit:junit:4.12'
+    implementation 'com.android.support:design:27.1.1'
 }

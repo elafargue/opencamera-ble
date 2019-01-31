@@ -1,5 +1,5 @@
 #pragma version(1)
-#pragma rs java_package_name(net.sourceforge.opencamera)
+#pragma rs java_package_name(io.wizkers.opencamera)
 #pragma rs_fp_relaxed
 
 rs_allocation bitmap0;

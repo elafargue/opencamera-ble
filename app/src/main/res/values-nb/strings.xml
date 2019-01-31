@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">Open Camera</string> <!-- shouldn't be translated -->
+    <string name="app_name">Kraken Housing Camera</string> <!-- shouldn't be translated -->
     <string name="action_settings">Innstillinger</string>
     <string name="action_popup">Oppsprettsinnstillinger</string>
     <string name="intro_text">Trykk for å fokusere, og trykk på den blå kameraknappen for å ta bilder. For mere hjelp, trykk på Netthjelp i Innstillinger. Open Camera er fullstendig gratis. Hvis du liker appen, så kan du gjerne kjøpe min donasjonsapp 🙂 (Se lenken i Innstillinger, eller Netthjelp).\n\nPrivatlivsretningslinjer: Posisjonstillatelser er nødvendig for geotagging, men dette er deaktivert som standard. Hvis det er aktivert, vil posisjonen din bli kodet inn i de lagrede filene (og brukes kun til dette formålet).</string>

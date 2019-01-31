@@ -1,4 +1,4 @@
-package net.sourceforge.opencamera;
+package io.wizkers.opencamera;
 
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;

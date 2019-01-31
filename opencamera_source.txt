@@ -28,6 +28,6 @@ Please contact me if you have suggestions, bug fixes, or whatever: mark DOT harm
 
 Homepage: http://opencamera.org.uk/
 
-Google Play download: https://play.google.com/store/apps/details?id=net.sourceforge.opencamera
+Google Play download: https://play.google.com/store/apps/details?id=io.wizkers.opencamera
 
 Mark Harman 9 September 2018
