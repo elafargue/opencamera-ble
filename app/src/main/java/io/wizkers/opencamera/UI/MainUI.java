@@ -285,19 +285,6 @@ public class MainUI {
 			setViewRotation(view, ui_rotation);
 			View previous_view = view;
 
-			/*
-			Note, we had:
-			 			// Kraken diving case icon
-			view = main_activity.findViewById(R.id.kraken_icon);
-			layoutParams = (RelativeLayout.LayoutParams)view.getLayoutParams();
-			layoutParams.addRule(align_parent_top, RelativeLayout.TRUE);
-			layoutParams.addRule(align_parent_bottom, 0);
-			layoutParams.addRule(left_of, R.id.exposure);
-			layoutParams.addRule(right_of, 0);
-			view.setLayoutParams(layoutParams);
-			setViewRotation(view, ui_rotation);
-*/
-
 			List<View> buttons_permanent = new ArrayList<>();
 			if( ui_placement == UIPlacement.UIPLACEMENT_TOP ) {
                 // not part of the icon panel in TOP mode
@@ -324,6 +311,7 @@ public class MainUI {
             //buttons_permanent.add(main_activity.findViewById(R.id.switch_camera));
             buttons_permanent.add(main_activity.findViewById(R.id.exposure_lock));
             buttons_permanent.add(main_activity.findViewById(R.id.white_balance_lock));
+            buttons_permanent.add(main_activity.findViewById(R.id.kraken_icon));
 			buttons_permanent.add(main_activity.findViewById(R.id.text_stamp));
 			buttons_permanent.add(main_activity.findViewById(R.id.stamp));
 			buttons_permanent.add(main_activity.findViewById(R.id.auto_level));
